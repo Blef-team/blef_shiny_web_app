@@ -17,20 +17,32 @@ is_empty_response <- function(response) {
 shinyServer(function(input, output) {
   scene <- reactiveVal("lobby")
   action_initialised <- reactiveVal("none")
+  game_uuid <- reactiveVal(NULL)
+  player_uuid <- reactiveVal(NULL)
+  nickname <- reactiveVal(NULL)
+  game <- reactiveVal()
   games <- reactiveVal()
   
   output$lobby_scene <- renderUI({
     if (scene() == "lobby") {
       if (action_initialised() == "none") {
         console <- list(
-          actionButton("create", "Create")
+          actionButton("create", "Create"),
+          actionButton("join", "Join")
         )
       } else if (action_initialised() == "create") {
         console <- list(
           actionButton("cancel", "Cancel"),
           actionButton("confirm_create", "Confirm")
         )
-      } 
+      } else if (action_initialised() == "join") {
+        console <- list(
+          textInput("game_uuid", "Game's UUID:", width = 300, placeholder = "00000000-0000-0000-0000-000000000000"),
+          textInput("nickname", "Pick a nickname:", width = 300),
+          actionButton("cancel", "Cancel"),
+          actionButton("confirm_join", "Confirm")
+        )
+      }
       
       mainPanel(
         titlePanel("Blef - game lobby"),
@@ -80,11 +92,105 @@ shinyServer(function(input, output) {
     }
   })
   
+  observeEvent(input$join, {
+    action_initialised("join")
+  })
+  
+  observeEvent(input$confirm_join, {
+    response <- try(GET(handle = engine, path = paste0("v2/games/", input$game_uuid, "/join?nickname=", input$nickname)), silent = TRUE)
+    if (is_empty_response(response)) {
+      shinyalert("Error", "There was an error querying the game engine")
+    } else if (status_code(response) != 200) {
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+    } else {
+      game_uuid(input$game_uuid)
+      player_uuid(content(response)$player_uuid)
+      nickname(input$nickname)
+      scene("game")
+      action_initialised("none")
+    }
+  })
+  
   observeEvent(input$cancel, {
     action_initialised("none")
   })
   
   output$game_scene <- renderUI({
+    if (scene() == "game") {
+      mainPanel(
+        titlePanel("Blef - game room"),
+        actionButton("leave", "Leave to lobby"),
+        hr(),
+        renderUI({
+          HTML(
+            paste0(
+              "Game UUID: ", game_uuid(), "<br/>",
+              "Admin nickname: ", game()$admin_nickname, "<br/>",
+              "Game public: ", game()$public, "<br/>",
+              "Game status: ", game()$status, "<br/>",
+              "Current round number: ", game()$round_number, "<br/>",
+              "Maximum allowed cards: ", game()$max_cards, "<br/>",
+              "Current player: ", game()$cp_nickname, "<br/>"
+            )
+          )
+        }),
+        HTML("Players:<br/>"),
+        renderTable({
+          if (length(game()$players) > 0) {
+            game()$players %>%
+              unlist() %>%
+              matrix(nrow = length(game()$players), byrow = T) %>%
+              data.frame(stringsAsFactors = FALSE) %>%
+              set_colnames(c("Player", "Cards"))
+          }
+        }),
+        HTML("Hands:<br/>"),
+        renderTable({
+          if (length(game()$hands) > 0) {
+            do.call(
+              rbind,
+              lapply(content(temp)$hands, function(p) 
+                do.call(rbind, p$hand) %>%
+                  as.data.frame() %>%
+                  set_colnames(c("Value", "Colour")) %>%
+                  dplyr::mutate(Player = p$nickname) %>%
+                  dplyr::select(Player, Value, Colour)
+              )
+            )
+          }
+        }),
+        HTML("History:<br/>"),
+        renderTable({
+          if (length(game()$history) > 0) {
+            game()$history %>%
+              unlist() %>%
+              matrix(nrow = length(game()$history), byrow = T) %>%
+              data.frame(stringsAsFactors = FALSE) %>%
+              set_colnames(c("Player", "Action ID"))
+          }
+        })
+      )
+    }
   })
-
+  
+  observe({
+    invalidateLater(1000)
+    if (scene() == "game") {
+      response <- try(GET(handle = engine, path = paste0("v2/games/", game_uuid())), silent = TRUE)
+      if (is_empty_response(response)) {
+        shinyalert("Error", "There was an error querying the game engine")
+      } else if (status_code(response) != 200) {
+        shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+      } else {
+        game(content(response))
+      }
+    }
+  })
+  
+  observeEvent(input$leave, {
+    game_uuid(NULL)
+    player_uuid(NULL)
+    nickname(NULL)
+    scene("lobby")
+  })
 })
