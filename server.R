@@ -28,7 +28,8 @@ shinyServer(function(input, output) {
       if (action_initialised() == "none") {
         console <- list(
           actionButton("create", "Create"),
-          actionButton("join", "Join")
+          actionButton("join", "Join"),
+          actionButton("rejoin", "Rejoin")
         )
       } else if (action_initialised() == "create") {
         console <- list(
@@ -41,6 +42,13 @@ shinyServer(function(input, output) {
           textInput("nickname", "Pick a nickname:", width = 300),
           actionButton("cancel", "Cancel"),
           actionButton("confirm_join", "Confirm")
+        )
+      } else if (action_initialised() == "rejoin") {
+        console <- list(
+          textInput("game_uuid", "Game's UUID", width = 300, placeholder = "00000000-0000-0000-0000-000000000000"),
+          textInput("player_uuid", "Your player UUID", width = 300, placeholder = "00000000-0000-0000-0000-000000000000"),
+          actionButton("cancel", "Cancel"),
+          actionButton("confirm_rejoin", "Confirm")
         )
       }
       
@@ -106,6 +114,24 @@ shinyServer(function(input, output) {
       game_uuid(input$game_uuid)
       player_uuid(content(response)$player_uuid)
       nickname(input$nickname)
+      scene("game")
+      action_initialised("none")
+    }
+  })
+  
+  observeEvent(input$rejoin, {
+    action_initialised("rejoin")
+  })
+  
+  observeEvent(input$confirm_rejoin, {
+    response <- try(GET(handle = engine, path = paste0("v2/games/", input$game_uuid, "?player_uuid=", input$player_uuid)), silent = TRUE)
+    if (is_empty_response(response)) {
+      shinyalert("Error", "There was an error querying the game engine")
+    } else if (status_code(response) != 200) {
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+    } else {
+      game_uuid(input$game_uuid)
+      player_uuid(input$player_uuid)
       scene("game")
       action_initialised("none")
     }
