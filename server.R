@@ -17,7 +17,8 @@ is_empty_response <- function(response) {
 shinyServer(function(input, output) {
   scene <- reactiveVal("lobby")
   action_initialised <- reactiveVal("none")
-
+  games <- reactiveVal()
+  
   output$lobby_scene <- renderUI({
     if (scene() == "lobby") {
       if (action_initialised() == "none") {
@@ -33,8 +34,35 @@ shinyServer(function(input, output) {
       
       mainPanel(
         titlePanel("Blef - game lobby"),
-        console
+        console,
+        hr(),
+        HTML("Public games:<br/>"),
+        renderTable({
+          if (length(games()) > 0) games()
+        })
       )
+    }
+  })
+  
+  observe({
+    invalidateLater(1000)
+    if (scene() == "lobby") {
+      response <- try(GET(handle = engine, path = "v2/games"), silent = TRUE)
+      if (is_empty_response(response)) {
+        shinyalert("Error", "There was an error querying the game engine")
+      } else {
+        if (length(response) > 0) {
+          raw_games <- content(response)
+          for (i in 1:length(raw_games)) raw_games[[i]]$players <- paste(raw_games[[i]]$players, collapse = ", ")
+          games(
+            raw_games %>%
+              unlist() %>%
+              matrix(nrow = length(raw_games), byrow = T) %>%
+              data.frame(stringsAsFactors = FALSE) %>%
+              set_colnames(c("UUID", "Players", "Started"))
+          )
+        }
+      }
     }
   })
   
