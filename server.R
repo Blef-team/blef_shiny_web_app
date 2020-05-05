@@ -34,6 +34,7 @@ shinyServer(function(input, output) {
         )
       } else if (action_initialised() == "create") {
         console <- list(
+          textInput("nickname", HTML("Pick a nickname<br/>(or leave blank and join manually later):"), width = 300),
           actionButton("cancel", "Cancel"),
           actionButton("confirm_create", "Confirm")
         )
@@ -98,12 +99,45 @@ shinyServer(function(input, output) {
   })
   
   observeEvent(input$confirm_create, {
-    response <- try(GET(handle = engine, path = "v2/games/create"), silent = TRUE)
-    if (status_code(response) != 200) {
-      shinyalert("Error", paste0("The engine returned an error saying: ", content(response))) 
+    if (input$nickname != "" & !str_detect(input$nickname, "^[a-zA-Z]\\w*$")) {
+      shinyalert(
+        "Invalid nickname", 
+        "It won't be possible to join with this nickname. 
+        A nickname must start with a letter and only have alphanumeric characters.<br/><br/>
+        Alternatively, leave the field blank if you don't wish to join the game but rather create an empty one",
+        html = TRUE
+      )
+    } else if (input$nickname == "") {
+      response <- try(GET(handle = engine, path = "v2/games/create"), silent = TRUE)
+      if (is_empty_response(response)) {
+        shinyalert("Error", "There was an error querying the game engine")
+      } else if (status_code(response) != 200) {
+        shinyalert("Error", paste0("The engine returned an error saying: ", content(response))) 
+      } else {
+        shinyalert("Game created", paste0("Note the UUID of the game:<br/>", content(response)$game_uuid), html = TRUE) 
+        action_initialised("none")
+      }
     } else {
-      shinyalert("Game created", paste0("Note the UUID of the game:<br/>", content(response)$game_uuid), html = TRUE) 
-      action_initialised("none")
+      response <- try(GET(handle = engine, path = "v2/games/create"), silent = TRUE)
+      if (is_empty_response(response)) {
+        shinyalert("Error", "There was an error querying the game engine")
+      } else if (status_code(response) != 200) {
+        shinyalert("Error", paste0("The engine returned an error saying: ", content(response)))
+      } else {
+        created_game_uuid <- content(response)$game_uuid
+        response <- try(GET(handle = engine, path = paste0("v2/games/", created_game_uuid, "/join?nickname=", input$nickname)), silent = TRUE)
+        if (is_empty_response(response)) {
+          shinyalert("Error", paste0("The game was created with UUID ", created_game_uuid, " but, while trying to join, there was an error querying the game engine"))
+        } else if (status_code(response) != 200) {
+          shinyalert("Error", paste0("The game was created with UUID ", created_game_uuid, " but, while trying to join, the engine returned an error saying: ", content(response)$error))
+        } else {
+          game_uuid(created_game_uuid)
+          player_uuid(content(response)$player_uuid)
+          nickname(input$nickname)
+          scene("game")
+          action_initialised("none")
+        }
+      }
     }
   })
   
