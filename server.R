@@ -112,17 +112,21 @@ shinyServer(function(input, output) {
   })
   
   observeEvent(input$confirm_join, {
-    response <- try(GET(handle = engine, path = paste0("v2/games/", input$game_uuid, "/join?nickname=", input$nickname)), silent = TRUE)
-    if (is_empty_response(response)) {
-      shinyalert("Error", "There was an error querying the game engine")
-    } else if (status_code(response) != 200) {
-      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+    if (!str_detect(input$nickname, "^[a-zA-Z]\\w*$")) {
+      shinyalert("Invalid nickname", "It won't be possible to join with this nickname. A nickname must start with a letter and only have alphanumeric characters")
     } else {
-      game_uuid(input$game_uuid)
-      player_uuid(content(response)$player_uuid)
-      nickname(input$nickname)
-      scene("game")
-      action_initialised("none")
+      response <- try(GET(handle = engine, path = paste0("v2/games/", input$game_uuid, "/join?nickname=", input$nickname)), silent = TRUE)
+      if (is_empty_response(response)) {
+        shinyalert("Error", "There was an error querying the game engine")
+      } else if (status_code(response) != 200) {
+        shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+      } else {
+        game_uuid(input$game_uuid)
+        player_uuid(content(response)$player_uuid)
+        nickname(input$nickname)
+        scene("game")
+        action_initialised("none")
+      }
     }
   })
   
