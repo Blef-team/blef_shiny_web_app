@@ -1,11 +1,17 @@
 library(shiny)
 library(shinyalert)
 library(magrittr)
+library(readr)
 library(stringr)
 library(httr)
 library(dplyr)
 
 engine <- handle("http://18.132.35.89:8001/")
+
+names <- read_csv("names.csv", col_types = cols())
+generate_name <- function() {
+  paste0(sample(names$adjective, 1), "_", sample(names$animal, 1))
+}
 
 is_empty_response <- function(response) {
   if (length(response) == 1 & is.character(response) & str_detect(response[1], "Error in curl")) {
@@ -115,16 +121,6 @@ shinyServer(function(input, output) {
         Alternatively, leave the field blank if you don't wish to join the game but rather create an empty one",
         html = TRUE
       )
-    } else if (input$nickname == "") {
-      response <- try(GET(handle = engine, path = "v2/games/create"), silent = TRUE)
-      if (is_empty_response(response)) {
-        shinyalert("Error", "There was an error querying the game engine")
-      } else if (status_code(response) != 200) {
-        shinyalert("Error", paste0("The engine returned an error saying: ", content(response))) 
-      } else {
-        shinyalert("Game created", paste0("Note the UUID of the game:<br/>", content(response)$game_uuid), html = TRUE) 
-        action_initialised("none")
-      }
     } else {
       response <- try(GET(handle = engine, path = "v2/games/create"), silent = TRUE)
       if (is_empty_response(response)) {
@@ -133,7 +129,8 @@ shinyServer(function(input, output) {
         shinyalert("Error", paste0("The engine returned an error saying: ", content(response)))
       } else {
         created_game_uuid <- content(response)$game_uuid
-        response <- try(GET(handle = engine, path = paste0("v2/games/", created_game_uuid, "/join?nickname=", input$nickname)), silent = TRUE)
+        effective_nickname <- if (input$nickname == "") generate_name() else input$nickname
+        response <- try(GET(handle = engine, path = paste0("v2/games/", created_game_uuid, "/join?nickname=", effective_nickname)), silent = TRUE)
         if (is_empty_response(response)) {
           shinyalert("Error", paste0("The game was created with UUID ", created_game_uuid, " but, while trying to join, there was an error querying the game engine"))
         } else if (status_code(response) != 200) {
