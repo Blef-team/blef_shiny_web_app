@@ -14,6 +14,10 @@ is_empty_response <- function(response) {
   }
 } 
 
+catch_null = function(x) {
+  ifelse(length(x) == 0, "Not available", x)
+}
+
 shinyServer(function(input, output) {
   scene <- reactiveVal("lobby")
   action_initialised <- reactiveVal("none")
@@ -22,6 +26,8 @@ shinyServer(function(input, output) {
   nickname <- reactiveVal(NULL)
   game <- reactiveVal()
   games <- reactiveVal()
+  
+  game_info_loaded <- reactiveVal(FALSE)
   
   output$lobby_scene <- renderUI({
     if (scene() == "lobby") {
@@ -204,7 +210,17 @@ shinyServer(function(input, output) {
   })
   
   output$game_scene <- renderUI({
-    if (scene() == "game") {
+    if (game_info_loaded()) {
+      
+      pre_game_buttons <- if (game()$status == "Not started" & catch_null(nickname()) == game()$admin_nickname) {
+        list(
+          br(),
+          start_button <- actionButton("start", "Start game"),
+          privacy_button <- if (!game()$public) actionButton("make_public", "Make public"),
+          privacy_button <- if (game()$public) actionButton("make_private", "Make private")
+        )
+      }
+      
       mainPanel(
         titlePanel("Blef - game room"),
         actionButton("leave", "Leave to lobby"),
@@ -222,6 +238,8 @@ shinyServer(function(input, output) {
             )
           )
         }),
+        pre_game_buttons,
+        br(),
         HTML("Players:<br/>"),
         renderTable({
           if (length(game()$players) > 0) {
@@ -272,6 +290,7 @@ shinyServer(function(input, output) {
         shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
       } else {
         game(content(response))
+        game_info_loaded(TRUE)
       }
     }
   })
@@ -281,5 +300,33 @@ shinyServer(function(input, output) {
     player_uuid(NULL)
     nickname(NULL)
     scene("lobby")
+    game_info_loaded(FALSE)
+  })
+  
+  observeEvent(input$start, {
+    response <- try(GET(handle = engine, path = paste0("v2/games/", game_uuid(), "/start?admin_uuid=", player_uuid())), silent = TRUE)
+    if (is_empty_response(response)) {
+      shinyalert("Error", "There was an error querying the game engine")
+    } else if (status_code(response) != 202) {
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+    }
+  })
+  
+  observeEvent(input$make_public, {
+    response <- try(GET(handle = engine, path = paste0("v2/games/", game_uuid(), "/make-public?admin_uuid=", player_uuid())), silent = TRUE)
+    if (is_empty_response(response)) {
+      shinyalert("Error", "There was an error querying the game engine")
+    } else if (status_code(response) != 200) {
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+    }
+  })
+  
+  observeEvent(input$make_private, {
+    response <- try(GET(handle = engine, path = paste0("v2/games/", game_uuid(), "/make-private?admin_uuid=", player_uuid())), silent = TRUE)
+    if (is_empty_response(response)) {
+      shinyalert("Error", "There was an error querying the game engine")
+    } else if (status_code(response) != 200) {
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+    }
   })
 })
