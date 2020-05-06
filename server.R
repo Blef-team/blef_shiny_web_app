@@ -3,6 +3,7 @@ library(shinyalert)
 library(magrittr)
 library(stringr)
 library(httr)
+library(dplyr)
 
 engine <- handle("http://18.132.35.89:8001/")
 
@@ -40,7 +41,7 @@ shinyServer(function(input, output) {
         )
       } else if (action_initialised() == "create") {
         console <- list(
-          textInput("nickname", HTML("Pick a nickname<br/>(or leave blank and join manually later):"), width = 300),
+          textInput("nickname", HTML("Pick a nickname<br/>(or leave blank and let us generate one):"), width = 300),
           actionButton("cancel", "Cancel"),
           actionButton("confirm_create", "Confirm")
         )
@@ -70,10 +71,10 @@ shinyServer(function(input, output) {
         titlePanel("Blef - game lobby"),
         console,
         hr(),
-        HTML("Public games:<br/>"),
+        h4("Public games:"),
         renderTable({
           if (length(games()) > 0) games()
-        })
+        }, sanitize.text.function = function(x) str_remove(x, "/"))
       )
     }
   })
@@ -93,7 +94,8 @@ shinyServer(function(input, output) {
               unlist() %>%
               matrix(nrow = length(raw_games), byrow = T) %>%
               data.frame(stringsAsFactors = FALSE) %>%
-              set_colnames(c("UUID", "Players", "Started"))
+              set_colnames(c("UUID", "Players", "Started")) %>%
+              mutate(UUID = sapply(UUID, function(x) HTML(paste0("<div style=\"font-family: Consolas\">", x, "</div>"))))
           )
         }
       }
@@ -211,6 +213,10 @@ shinyServer(function(input, output) {
   
   output$game_scene <- renderUI({
     if (game_info_loaded()) {
+      game_info_table <- data.frame(
+        keys = c("Game UUID", "Admin nickname", "Game public", "Game status", "Current round number", "Maximum allowed cards", "Current player"),
+        values = as.character(c(game_uuid(), game()$admin_nickname, ifelse(game()$public, "Yes", "No"), game()$status, game()$round_number, game()$max_cards, catch_null(game()$cp_nickname)))
+      )
       
       pre_game_buttons <- if (game()$status == "Not started" & catch_null(nickname()) == game()$admin_nickname) {
         list(
@@ -222,25 +228,13 @@ shinyServer(function(input, output) {
       }
       
       mainPanel(
-        titlePanel("Blef - game room"),
-        actionButton("leave", "Leave to lobby"),
-        hr(),
-        renderUI({
-          HTML(
-            paste0(
-              "Game UUID: ", game_uuid(), "<br/>",
-              "Admin nickname: ", game()$admin_nickname, "<br/>",
-              "Game public: ", game()$public, "<br/>",
-              "Game status: ", game()$status, "<br/>",
-              "Current round number: ", game()$round_number, "<br/>",
-              "Maximum allowed cards: ", game()$max_cards, "<br/>",
-              "Current player: ", game()$cp_nickname, "<br/>"
-            )
-          )
-        }),
-        pre_game_buttons,
         br(),
-        HTML("Players:<br/>"),
+        actionButton("leave", "Leave to lobby"),
+        br(),
+        h5("Game info:"),
+        renderTable(game_info_table, include.colnames = FALSE),
+        pre_game_buttons,
+        h5("Cards per player:"),
         renderTable({
           if (length(game()$players) > 0) {
             game()$players %>%
@@ -249,13 +243,13 @@ shinyServer(function(input, output) {
               data.frame(stringsAsFactors = FALSE) %>%
               set_colnames(c("Player", "Cards"))
           }
-        }),
-        HTML("Hands:<br/>"),
+        }, include.colnames = FALSE),
+        h5("Known cards:"),
         renderTable({
           if (length(game()$hands) > 0) {
             do.call(
               rbind,
-              lapply(content(temp)$hands, function(p) 
+              lapply(game()$hands, function(p) 
                 do.call(rbind, p$hand) %>%
                   as.data.frame() %>%
                   set_colnames(c("Value", "Colour")) %>%
@@ -264,8 +258,8 @@ shinyServer(function(input, output) {
               )
             )
           }
-        }),
-        HTML("History:<br/>"),
+        }, include.colnames = FALSE),
+        h5("History:"),
         renderTable({
           if (length(game()$history) > 0) {
             game()$history %>%
@@ -274,7 +268,7 @@ shinyServer(function(input, output) {
               data.frame(stringsAsFactors = FALSE) %>%
               set_colnames(c("Player", "Action ID"))
           }
-        })
+        }, include.colnames = FALSE)
       )
     }
   })
