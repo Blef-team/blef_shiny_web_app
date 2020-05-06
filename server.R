@@ -133,7 +133,7 @@ shinyServer(function(input, output) {
         } else {
           game_uuid(created_game_uuid)
           player_uuid(content(response)$player_uuid)
-          nickname(input$nickname)
+          nickname(effective_nickname)
           scene("game")
           action_initialised("none")
         }
@@ -146,10 +146,13 @@ shinyServer(function(input, output) {
   })
   
   observeEvent(input$confirm_join, {
-    if (!str_detect(input$nickname, "^[a-zA-Z]\\w*$")) {
+    if (input$nickname != "" & !str_detect(input$nickname, "^[a-zA-Z]\\w*$")) {
       shinyalert("Invalid nickname", "It won't be possible to join with this nickname. A nickname must start with a letter and only have alphanumeric characters")
     } else {
-      response <- try(GET(handle = engine, path = paste0("v2/games/", input$game_uuid, "/join?nickname=", input$nickname)), silent = TRUE)
+      print(input$nickname)
+      effective_nickname <- if (input$nickname == "") generate_name() else input$nickname
+      print(effective_nickname)
+      response <- try(GET(handle = engine, path = paste0("v2/games/", input$game_uuid, "/join?nickname=", effective_nickname)), silent = TRUE)
       if (is_empty_response(response)) {
         shinyalert("Error", "There was an error querying the game engine")
       } else if (status_code(response) != 200) {
@@ -157,7 +160,7 @@ shinyServer(function(input, output) {
       } else {
         game_uuid(input$game_uuid)
         player_uuid(content(response)$player_uuid)
-        nickname(input$nickname)
+        nickname(effective_nickname)
         scene("game")
         action_initialised("none")
       }
