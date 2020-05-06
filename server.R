@@ -13,6 +13,8 @@ generate_name <- function() {
   paste0(sample(names$adjective, 1), "_", sample(names$animal, 1))
 }
 
+actions <- read_csv("action_descriptions.csv", col_types = cols())
+
 is_empty_response <- function(response) {
   if (length(response) == 1 & is.character(response) & str_detect(response[1], "Error in curl")) {
     return(TRUE)
@@ -207,8 +209,8 @@ shinyServer(function(input, output) {
       }
       
       mainPanel(
+        br(),
         if (game()$status == "Finished" | is.null(player_uuid())) list(
-          br(),
           actionButton("leave", "Leave to lobby"),
           br(),
           br()
@@ -249,6 +251,14 @@ shinyServer(function(input, output) {
               data.frame(stringsAsFactors = FALSE) %>%
               set_colnames(c("Player", "Action ID"))
           }, include.colnames = FALSE)
+        },
+        if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game()$cp_nickname)) {
+          list(
+            h5("Make your move:"),
+            selectInput("bet_id", NULL, setNames(0:87, head(actions$description, -1)), selected = "Check"),
+            actionButton("bet", "Confirm bet"),
+            actionButton("check", "Check")
+          )
         }
       )
     }
@@ -295,6 +305,24 @@ shinyServer(function(input, output) {
   
   observeEvent(input$make_private, {
     response <- try(GET(handle = engine, path = paste0("v2/games/", game_uuid(), "/make-private?admin_uuid=", player_uuid())), silent = TRUE)
+    if (is_empty_response(response)) {
+      shinyalert("Error", "There was an error querying the game engine")
+    } else if (status_code(response) != 200) {
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+    }
+  })
+  
+  observeEvent(input$bet, {
+    response <- try(GET(handle = engine, path = paste0("v2/games/", game_uuid(), "/play?player_uuid=", player_uuid(), "&action_id=", input$bet_id)), silent = TRUE)
+    if (is_empty_response(response)) {
+      shinyalert("Error", "There was an error querying the game engine")
+    } else if (status_code(response) != 200) {
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+    }
+  })
+  
+  observeEvent(input$check, {
+    response <- try(GET(handle = engine, path = paste0("v2/games/", game_uuid(), "/play?player_uuid=", player_uuid(), "&action_id=", 88)), silent = TRUE)
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
