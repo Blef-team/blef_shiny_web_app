@@ -220,40 +220,47 @@ shinyServer(function(input, output) {
         ),
         renderTable(game_info_table, include.colnames = FALSE),
         pre_game_buttons,
-        h5("Cards per player:"),
         if (length(game()$players) > 0) {
-          renderTable({
-            game()$players %>%
-              unlist() %>%
-              matrix(nrow = length(game()$players), byrow = T) %>%
-              data.frame(stringsAsFactors = FALSE) %>%
-              set_colnames(c("Player", "Cards"))
-          }, include.colnames = FALSE)
+          list(
+            h5("Cards per player:"),
+            renderTable({
+              game()$players %>%
+                unlist() %>%
+                matrix(nrow = length(game()$players), byrow = T) %>%
+                data.frame(stringsAsFactors = FALSE) %>%
+                set_colnames(c("Player", "Cards"))
+            }, include.colnames = FALSE)
+          )
         },
-        h5("Known cards:"),
         if (length(game()$hands) > 0) {
-          renderTable({
-            do.call(
-              rbind,
-              lapply(game()$hands, function(p) 
-                do.call(rbind, p$hand) %>%
-                  as.data.frame() %>%
-                  set_colnames(c("Value", "Colour")) %>%
-                  mutate(Player = p$nickname) %>%
-                  select(Player, Value, Colour)
+          list(
+            h5("Known cards:"),
+            renderTable({
+              do.call(
+                rbind,
+                lapply(game()$hands, function(p) 
+                  do.call(rbind, p$hand) %>%
+                    as.data.frame() %>%
+                    set_colnames(c("Value", "Colour")) %>%
+                    mutate(Player = p$nickname) %>%
+                    select(Player, Value, Colour)
+                )
               )
-            )
-          }, include.colnames = FALSE)
+            }, include.colnames = FALSE)
+          )
         },
-        h5("History:"),
         if (length(game()$history) > 0) {
-          renderTable({
-            game()$history %>%
-              unlist() %>%
-              matrix(nrow = length(game()$history), byrow = T) %>%
-              data.frame(stringsAsFactors = FALSE) %>%
-              set_colnames(c("Player", "Action ID"))
-          }, include.colnames = FALSE)
+          history <- game()$history
+          list(
+            h5("History:"),
+            renderTable({
+              history %>%
+                unlist() %>%
+                matrix(nrow = length(history), byrow = T) %>%
+                data.frame(stringsAsFactors = FALSE) %>%
+                set_colnames(c("Player", "Action ID"))
+            }, include.colnames = FALSE)
+          )
         },
         if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game()$cp_nickname)) {
           list(
