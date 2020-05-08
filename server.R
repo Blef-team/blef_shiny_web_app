@@ -268,7 +268,7 @@ shinyServer(function(input, output) {
   })
   
   observe({
-    invalidateLater(1000)
+    invalidateLater(500)
     if (scene() == "game") {
       if (!is.null(player_uuid)) response <- try(GET(handle = engine, path = paste0("v2/games/", game_uuid(), "?player_uuid=", player_uuid())), silent = TRUE)
       if (is.null(player_uuid)) response <- try(GET(handle = engine, path = paste0("v2/games/", game_uuid())), silent = TRUE)
