@@ -33,7 +33,7 @@ shinyServer(function(input, output) {
   game_uuid <- reactiveVal(NULL)
   player_uuid <- reactiveVal(NULL)
   nickname <- reactiveVal(NULL)
-  game <- reactiveVal()
+  game <- reactiveValues()
   games <- reactiveVal()
   
   game_info_loaded <- reactiveVal(FALSE)
@@ -197,46 +197,46 @@ shinyServer(function(input, output) {
     if (game_info_loaded()) {
       game_info_table <- data.frame(
         keys = c("Game UUID", "Admin nickname", "Game public", "Game status", "Current round number", "Maximum allowed cards", "Current player"),
-        values = as.character(c(game_uuid(), game()$admin_nickname, ifelse(game()$public, "Yes", "No"), game()$status, game()$round_number, game()$max_cards, catch_null(game()$cp_nickname)))
+        values = as.character(c(game_uuid(), game$admin_nickname, ifelse(game$public, "Yes", "No"), game$status, game$round_number, game$max_cards, catch_null(game$cp_nickname)))
       )
       
-      pre_game_buttons <- if (game()$status == "Not started" & catch_null(nickname()) == game()$admin_nickname) {
+      pre_game_buttons <- if (game$status == "Not started" & catch_null(nickname()) == game$admin_nickname) {
         list(
           br(),
           start_button <- actionButton("start", "Start game"),
-          privacy_button <- if (!game()$public) actionButton("make_public", "Make public"),
-          privacy_button <- if (game()$public) actionButton("make_private", "Make private")
+          privacy_button <- if (!game$public) actionButton("make_public", "Make public"),
+          privacy_button <- if (game$public) actionButton("make_private", "Make private")
         )
       }
       
       mainPanel(
         br(),
-        if (game()$status == "Finished" | is.null(player_uuid())) list(
+        if (game$status == "Finished" | is.null(player_uuid())) list(
           actionButton("leave", "Leave to lobby"),
           br(),
           br()
         ),
         renderTable(game_info_table, include.colnames = FALSE),
         pre_game_buttons,
-        if (length(game()$players) > 0) {
+        if (length(game$players) > 0) {
           list(
             h5("Cards per player:"),
             renderTable({
-              game()$players %>%
+              game$players %>%
                 unlist() %>%
-                matrix(nrow = length(game()$players), byrow = T) %>%
+                matrix(nrow = length(game$players), byrow = T) %>%
                 data.frame(stringsAsFactors = FALSE) %>%
                 set_colnames(c("Player", "Cards"))
             }, include.colnames = FALSE)
           )
         },
-        if (length(game()$hands) > 0) {
+        if (length(game$hands) > 0) {
           list(
             h5("Known cards:"),
             renderTable({
               do.call(
                 rbind,
-                lapply(game()$hands, function(p) 
+                lapply(game$hands, function(p) 
                   do.call(rbind, p$hand) %>%
                     as.data.frame() %>%
                     set_colnames(c("Value", "Colour")) %>%
@@ -247,8 +247,8 @@ shinyServer(function(input, output) {
             }, include.colnames = FALSE)
           )
         },
-        if (length(game()$history) > 0) {
-          history <- game()$history
+        if (length(game$history) > 0) {
+          history <- game$history
           list(
             h5("History:"),
             renderTable({
@@ -260,7 +260,7 @@ shinyServer(function(input, output) {
             }, include.colnames = FALSE)
           )
         },
-        if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game()$cp_nickname)) {
+        if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
           list(
             h5("Make your move:"),
             selectInput("bet_id", NULL, setNames(0:87, head(actions$description, -1)), selected = "Check"),
@@ -282,7 +282,7 @@ shinyServer(function(input, output) {
       } else if (status_code(response) != 200) {
         shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
       } else {
-        game(content(response))
+        lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
         game_info_loaded(TRUE)
       }
     }
