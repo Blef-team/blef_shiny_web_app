@@ -46,3 +46,11 @@ format_players <- function(players) {
     data.frame(stringsAsFactors = FALSE) %>%
     set_colnames(c("Player", "Cards"))
 }
+
+format_history <- function(history) {
+  history %>%
+    unlist() %>%
+    matrix(nrow = length(history), byrow = T) %>%
+    data.frame(stringsAsFactors = FALSE) %>%
+    set_colnames(c("Player", "Action ID"))
+}

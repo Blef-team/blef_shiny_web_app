@@ -215,16 +215,9 @@ shinyServer(function(input, output) {
           )
         },
         if (length(game$history) > 0) {
-          history <- game$history
           list(
             h5("History:"),
-            renderTable({
-              history %>%
-                unlist() %>%
-                matrix(nrow = length(history), byrow = T) %>%
-                data.frame(stringsAsFactors = FALSE) %>%
-                set_colnames(c("Player", "Action ID"))
-            }, include.colnames = FALSE)
+            renderTable(format_history(game$history), include.colnames = FALSE)
           )
         },
         if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
