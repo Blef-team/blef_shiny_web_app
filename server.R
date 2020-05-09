@@ -6,7 +6,7 @@ library(stringr)
 library(httr)
 library(dplyr)
 
-engine <- handle("http://18.132.35.89:8001/")
+base_path <- "http://18.132.35.89:8001/v2/"
 
 names <- read_csv("names.csv", col_types = cols())
 generate_name <- function() {
@@ -83,7 +83,7 @@ shinyServer(function(input, output) {
   observe({
     invalidateLater(1000)
     if (scene() == "lobby") {
-      response <- try(GET(handle = engine, path = "v2/games"), silent = TRUE)
+      response <- try(GET(paste0(base_path, "games")), silent = TRUE)
       if (is_empty_response(response)) {
         shinyalert("Error", "There was an error querying the game engine")
       } else {
@@ -117,7 +117,7 @@ shinyServer(function(input, output) {
         html = TRUE
       )
     } else {
-      response <- try(GET(handle = engine, path = "v2/games/create"), silent = TRUE)
+      response <- try(GET(paste0(base_path, "games/create")), silent = TRUE)
       if (is_empty_response(response)) {
         shinyalert("Error", "There was an error querying the game engine")
       } else if (status_code(response) != 200) {
@@ -125,7 +125,7 @@ shinyServer(function(input, output) {
       } else {
         created_game_uuid <- content(response)$game_uuid
         effective_nickname <- if (input$nickname == "") generate_name() else input$nickname
-        response <- try(GET(handle = engine, path = paste0("v2/games/", created_game_uuid, "/join?nickname=", effective_nickname)), silent = TRUE)
+        response <- try(GET(paste0(base_path, "games/", created_game_uuid, "/join?nickname=", effective_nickname)), silent = TRUE)
         if (is_empty_response(response)) {
           shinyalert("Error", paste0("The game was created with UUID ", created_game_uuid, " but, while trying to join, there was an error querying the game engine"))
         } else if (status_code(response) != 200) {
@@ -149,10 +149,8 @@ shinyServer(function(input, output) {
     if (input$nickname != "" & !str_detect(input$nickname, "^[a-zA-Z]\\w*$")) {
       shinyalert("Invalid nickname", "It won't be possible to join with this nickname. A nickname must start with a letter and only have alphanumeric characters")
     } else {
-      print(input$nickname)
       effective_nickname <- if (input$nickname == "") generate_name() else input$nickname
-      print(effective_nickname)
-      response <- try(GET(handle = engine, path = paste0("v2/games/", input$game_uuid, "/join?nickname=", effective_nickname)), silent = TRUE)
+      response <- try(GET(paste0(base_path, "games/", input$game_uuid, "/join?nickname=", effective_nickname)), silent = TRUE)
       if (is_empty_response(response)) {
         shinyalert("Error", "There was an error querying the game engine")
       } else if (status_code(response) != 200) {
@@ -177,7 +175,7 @@ shinyServer(function(input, output) {
   })
   
   observeEvent(input$confirm_observe, {
-    response <- try(GET(handle = engine, path = paste0("v2/games/", input$game_uuid)), silent = TRUE)
+    response <- try(GET(paste0(base_path, "games/", input$game_uuid)), silent = TRUE)
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
@@ -277,8 +275,8 @@ shinyServer(function(input, output) {
   observe({
     invalidateLater(500)
     if (scene() == "game") {
-      if (!is.null(player_uuid)) response <- try(GET(handle = engine, path = paste0("v2/games/", game_uuid(), "?player_uuid=", player_uuid())), silent = TRUE)
-      if (is.null(player_uuid)) response <- try(GET(handle = engine, path = paste0("v2/games/", game_uuid())), silent = TRUE)
+      if (!is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid())), silent = TRUE)
+      if (is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid())), silent = TRUE)
       if (is_empty_response(response)) {
         shinyalert("Error", "There was an error querying the game engine")
       } else if (status_code(response) != 200) {
@@ -296,7 +294,7 @@ shinyServer(function(input, output) {
   })
   
   observeEvent(input$start, {
-    response <- try(GET(handle = engine, path = paste0("v2/games/", game_uuid(), "/start?admin_uuid=", player_uuid())), silent = TRUE)
+    response <- try(GET(paste0(base_path, "games/", game_uuid(), "/start?admin_uuid=", player_uuid())), silent = TRUE)
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 202) {
@@ -305,7 +303,7 @@ shinyServer(function(input, output) {
   })
   
   observeEvent(input$make_public, {
-    response <- try(GET(handle = engine, path = paste0("v2/games/", game_uuid(), "/make-public?admin_uuid=", player_uuid())), silent = TRUE)
+    response <- try(GET(paste0(base_path, "games/", game_uuid(), "/make-public?admin_uuid=", player_uuid())), silent = TRUE)
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
@@ -314,7 +312,7 @@ shinyServer(function(input, output) {
   })
   
   observeEvent(input$make_private, {
-    response <- try(GET(handle = engine, path = paste0("v2/games/", game_uuid(), "/make-private?admin_uuid=", player_uuid())), silent = TRUE)
+    response <- try(GET(paste0(base_path, "games/", game_uuid(), "/make-private?admin_uuid=", player_uuid())), silent = TRUE)
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
@@ -323,7 +321,7 @@ shinyServer(function(input, output) {
   })
   
   observeEvent(input$bet, {
-    response <- try(GET(handle = engine, path = paste0("v2/games/", game_uuid(), "/play?player_uuid=", player_uuid(), "&action_id=", input$bet_id)), silent = TRUE)
+    response <- try(GET(paste0(base_path, "games/", game_uuid(), "/play?player_uuid=", player_uuid(), "&action_id=", input$bet_id)), silent = TRUE)
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
@@ -332,7 +330,7 @@ shinyServer(function(input, output) {
   })
   
   observeEvent(input$check, {
-    response <- try(GET(handle = engine, path = paste0("v2/games/", game_uuid(), "/play?player_uuid=", player_uuid(), "&action_id=", 88)), silent = TRUE)
+    response <- try(GET(paste0(base_path, "games/", game_uuid(), "/play?player_uuid=", player_uuid(), "&action_id=", 88)), silent = TRUE)
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
