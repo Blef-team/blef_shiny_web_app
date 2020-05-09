@@ -1,0 +1,15 @@
+th,td{
+  border-top: 1pt solid #ddd !important;
+  border-bottom: 1pt solid #ddd !important;
+  padding-top: 1px !important;
+  padding-bottom: 1px !important;
+}
+
+
+.table {
+  margin-bottom: 0;
+}
+
+thead {
+  border-bottom: 1pt solid #ddd;
+}
