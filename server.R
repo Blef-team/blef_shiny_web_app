@@ -27,6 +27,25 @@ catch_null = function(x) {
   ifelse(length(x) == 0, "Not available", x)
 }
 
+format_hands <- function(hands) {
+  if (length(hands) == 0) {
+    return(NULL)
+  } else {
+    return(
+      do.call(
+        rbind,
+        lapply(hands, function(p) 
+          do.call(rbind, p$hand) %>%
+            as.data.frame() %>%
+            set_colnames(c("Value", "Colour")) %>%
+            mutate(Player = p$nickname) %>%
+            select(Player, Value, Colour)
+        )
+      )
+    )
+  }
+}
+
 shinyServer(function(input, output) {
   scene <- reactiveVal("lobby")
   action_initialised <- reactiveVal("none")
@@ -230,21 +249,10 @@ shinyServer(function(input, output) {
             }, include.colnames = FALSE)
           )
         },
-        if (length(game$hands) > 0) {
+        if (!is.null(game$hands)) {
           list(
             h5("Known cards:"),
-            renderTable({
-              do.call(
-                rbind,
-                lapply(game$hands, function(p) 
-                  do.call(rbind, p$hand) %>%
-                    as.data.frame() %>%
-                    set_colnames(c("Value", "Colour")) %>%
-                    mutate(Player = p$nickname) %>%
-                    select(Player, Value, Colour)
-                )
-              )
-            }, include.colnames = FALSE)
+            renderTable(format_hands(game$hands), include.colnames = FALSE)
           )
         },
         if (length(game$history) > 0) {
