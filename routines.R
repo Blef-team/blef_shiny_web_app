@@ -14,7 +14,7 @@ catch_null = function(x) {
   ifelse(length(x) == 0, "Not available", x)
 }
 
-format_hands <- function(hands) {
+format_all_hands <- function(hands) {
   if (length(hands) == 0) {
     return(NULL)
   } else {
@@ -24,13 +24,17 @@ format_hands <- function(hands) {
         lapply(hands, function(p) 
           data.frame(
             Player = p$nickname,
-            Cards = lapply(p$hand, function(card) {
-              as.character(img(src = paste0("assets/cards/specific/", card$value, card$colour, ".png"), height = 40))
-            }) %>%
-              paste0(collapse = "")
+            Cards = format_hand(p$hand)
           )
         )
       )
     )
   }
+}
+
+format_hand <- function(hand) {
+  lapply(hand, function(card) {
+    as.character(img(src = paste0("assets/cards/specific/", card$value, card$colour, ".png"), height = 40))
+  }) %>%
+    paste0(collapse = "")
 }
