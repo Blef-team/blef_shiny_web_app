@@ -35,11 +35,13 @@ format_hands <- function(hands) {
       do.call(
         rbind,
         lapply(hands, function(p) 
-          do.call(rbind, p$hand) %>%
-            as.data.frame() %>%
-            set_colnames(c("Value", "Colour")) %>%
-            mutate(Player = p$nickname) %>%
-            select(Player, Value, Colour)
+          data.frame(
+            Player = p$nickname,
+            Cards = lapply(p$hand, function(card) {
+              as.character(img(src = paste0("assets/cards/specific/", card$value, card$colour, ".png"), height = 40))
+            }) %>%
+              paste0(collapse = "")
+          )
         )
       )
     )
@@ -252,7 +254,7 @@ shinyServer(function(input, output) {
         if (!is.null(game$hands)) {
           list(
             h5("Known cards:"),
-            renderTable(format_hands(game$hands), include.colnames = FALSE)
+            renderTable(format_hands(game$hands), include.colnames = FALSE, sanitize.text.function = function(x) x)
           )
         },
         if (length(game$history) > 0) {
