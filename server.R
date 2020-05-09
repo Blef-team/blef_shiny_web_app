@@ -205,13 +205,7 @@ shinyServer(function(input, output) {
         if (length(game$players) > 0) {
           list(
             h5("Cards per player:"),
-            renderTable({
-              game$players %>%
-                unlist() %>%
-                matrix(nrow = length(game$players), byrow = T) %>%
-                data.frame(stringsAsFactors = FALSE) %>%
-                set_colnames(c("Player", "Cards"))
-            }, include.colnames = FALSE)
+            renderTable(format_players(game$players), include.colnames = FALSE)
           )
         },
         if (!is.null(game$hands)) {

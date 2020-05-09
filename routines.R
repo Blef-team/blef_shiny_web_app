@@ -38,3 +38,11 @@ format_hand <- function(hand) {
   }) %>%
     paste0(collapse = "")
 }
+
+format_players <- function(players) {
+  players %>%
+    unlist() %>%
+    matrix(nrow = length(players), byrow = T) %>%
+    data.frame(stringsAsFactors = FALSE) %>%
+    set_colnames(c("Player", "Cards"))
+}
