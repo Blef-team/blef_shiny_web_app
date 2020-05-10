@@ -193,41 +193,79 @@ shinyServer(function(input, output) {
         )
       }
       
-      mainPanel(
+      leave_button <- if (game$status == "Finished" | is.null(player_uuid())) list(
+        actionButton("leave", "Leave to lobby"),
         br(),
-        if (game$status == "Finished" | is.null(player_uuid())) list(
-          actionButton("leave", "Leave to lobby"),
-          br(),
-          br()
-        ),
-        renderTable(game_info_table, include.colnames = FALSE),
-        pre_game_buttons,
-        if (length(game$players) > 0) {
-          list(
+        br()
+      )
+      
+      if (game$status == "Running") {
+        if (length(game$hands) == 1) {
+          print(game$hands)
+          print(format_hand(game$hands[[1]]$hand))
+          # If you only see your own hand, generate both a 'your hand' row and a 'cards per player' object
+          general_and_cards_info <- list(
+              renderTable(
+                rbind(game_info_table, data.frame(keys = "Your cards", values = format_hand(game$hands[[1]]$hand))), 
+                include.colnames = FALSE, 
+                sanitize.text.function = function(x) x
+              ),
+              h5("Cards per player:"),
+              renderTable(format_players(game$players), include.colnames = FALSE)
+            )
+        } else if (length(game$hands) > 1) {
+          # If you can show everybody's (more than 1 person's) hands, don't show cards per player
+          general_and_cards_info <- 
+            list(
+              renderTable(game_info_table, include.colnames = FALSE),
+              h5("Hands:"),
+              renderTable(format_hands(game$hands), include.colnames = FALSE)
+            )
+        } else if (length(game$hands) == 0) {
+          # If you can't show anybody's hand, there is no hand object to generate
+          general_and_cards_info <- list(
+            renderTable(game_info_table, include.colnames = FALSE),
             h5("Cards per player:"),
             renderTable(format_players(game$players), include.colnames = FALSE)
-          )
-        },
-        if (!is.null(game$hands)) {
-          list(
-            h5("Known cards:"),
-            renderTable(format_hands(game$hands), include.colnames = FALSE, sanitize.text.function = function(x) x)
-          )
-        },
-        if (length(game$history) > 0) {
-          list(
-            h5("History:"),
-            renderTable(format_history(game$history), include.colnames = FALSE)
-          )
-        },
-        if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
-          list(
-            h5("Make your move:"),
-            selectInput("bet_id", NULL, setNames(0:87, head(actions$description, -1)), selected = "Check"),
-            actionButton("bet", "Confirm bet"),
-            actionButton("check", "Check")
-          )
+          ) 
         }
+      } else if (game$status == "Not started") {
+        general_and_cards_info <- list(
+          renderTable(game_info_table, include.colnames = FALSE),
+          h5("Cards per player:"),
+          renderTable(format_players(game$players), include.colnames = FALSE)
+        ) 
+      } else if (game$status == "Finished") {
+        general_and_cards_info <- list(
+          renderTable(game_info_table, include.colnames = FALSE),
+          h5("Cards per player:"),
+          renderTable(format_players(game$players), include.colnames = FALSE)
+        ) 
+      }
+      
+      history_table <- if (length(game$history) > 0) {
+        list(
+          h5("History:"),
+          renderTable(format_history(game$history), include.colnames = FALSE)
+        )
+      }
+      
+      action_menu <- if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
+        list(
+          h5("Make your move:"),
+          selectInput("bet_id", NULL, setNames(0:87, head(actions$description, -1)), selected = "Check"),
+          actionButton("bet", "Confirm bet"),
+          actionButton("check", "Check")
+        )
+      }
+      
+      mainPanel(
+        br(),
+        leave_button,
+        general_and_cards_info,
+        pre_game_buttons,
+        history_table,
+        action_menu
       )
     }
   })
