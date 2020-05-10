@@ -7,46 +7,9 @@ library(httr)
 library(dplyr)
 
 base_path <- "http://18.132.35.89:8001/v2/"
-
 names <- read_csv("names.csv", col_types = cols())
-generate_name <- function() {
-  paste0(sample(names$adjective, 1), "_", sample(names$animal, 1))
-}
-
 actions <- read_csv("action_descriptions.csv", col_types = cols())
-
-is_empty_response <- function(response) {
-  if (length(response) == 1 & is.character(response) & str_detect(response[1], "Error in curl")) {
-    return(TRUE)
-  } else {
-    return(FALSE)
-  }
-} 
-
-catch_null = function(x) {
-  ifelse(length(x) == 0, "Not available", x)
-}
-
-format_hands <- function(hands) {
-  if (length(hands) == 0) {
-    return(NULL)
-  } else {
-    return(
-      do.call(
-        rbind,
-        lapply(hands, function(p) 
-          data.frame(
-            Player = p$nickname,
-            Cards = lapply(p$hand, function(card) {
-              as.character(img(src = paste0("assets/cards/specific/", card$value, card$colour, ".png"), height = 40))
-            }) %>%
-              paste0(collapse = "")
-          )
-        )
-      )
-    )
-  }
-}
+source("routines.R", local = TRUE)
 
 shinyServer(function(input, output) {
   scene <- reactiveVal("lobby")
@@ -230,54 +193,79 @@ shinyServer(function(input, output) {
         )
       }
       
+      leave_button <- if (game$status == "Finished" | is.null(player_uuid())) list(
+        actionButton("leave", "Leave to lobby"),
+        br(),
+        br()
+      )
+      
+      if (game$status == "Running") {
+        if (length(game$hands) == 1) {
+          print(game$hands)
+          print(format_hand(game$hands[[1]]$hand))
+          # If you only see your own hand, generate both a 'your hand' row and a 'cards per player' object
+          general_and_cards_info <- list(
+              renderTable(
+                rbind(game_info_table, data.frame(keys = "Your cards", values = format_hand(game$hands[[1]]$hand))), 
+                include.colnames = FALSE, 
+                sanitize.text.function = function(x) x
+              ),
+              h5("Cards per player:"),
+              renderTable(format_players(game$players), include.colnames = FALSE)
+            )
+        } else if (length(game$hands) > 1) {
+          # If you can show everybody's (more than 1 person's) hands, don't show cards per player
+          general_and_cards_info <- 
+            list(
+              renderTable(game_info_table, include.colnames = FALSE),
+              h5("Hands:"),
+              renderTable(format_hands(game$hands), include.colnames = FALSE)
+            )
+        } else if (length(game$hands) == 0) {
+          # If you can't show anybody's hand, there is no hand object to generate
+          general_and_cards_info <- list(
+            renderTable(game_info_table, include.colnames = FALSE),
+            h5("Cards per player:"),
+            renderTable(format_players(game$players), include.colnames = FALSE)
+          ) 
+        }
+      } else if (game$status == "Not started") {
+        general_and_cards_info <- list(
+          renderTable(game_info_table, include.colnames = FALSE),
+          h5("Cards per player:"),
+          renderTable(format_players(game$players), include.colnames = FALSE)
+        ) 
+      } else if (game$status == "Finished") {
+        general_and_cards_info <- list(
+          renderTable(game_info_table, include.colnames = FALSE),
+          h5("Cards per player:"),
+          renderTable(format_players(game$players), include.colnames = FALSE)
+        ) 
+      }
+      
+      history_table <- if (length(game$history) > 0) {
+        list(
+          h5("History:"),
+          renderTable(format_history(game$history), include.colnames = FALSE)
+        )
+      }
+      
+      action_menu <- if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
+        list(
+          h5("Make your move:"),
+          selectInput("bet_id", NULL, setNames(0:87, head(actions$description, -1)), selected = "Check"),
+          actionButton("bet", "Confirm bet"),
+          actionButton("check", "Check")
+        )
+      }
+      
       mainPanel(
         br(),
-        if (game$status == "Finished" | is.null(player_uuid())) list(
-          actionButton("leave", "Leave to lobby"),
-          br(),
-          br()
-        ),
-        renderTable(game_info_table, include.colnames = FALSE),
+        leave_button,
+        general_and_cards_info,
         pre_game_buttons,
-        if (length(game$players) > 0) {
-          list(
-            h5("Cards per player:"),
-            renderTable({
-              game$players %>%
-                unlist() %>%
-                matrix(nrow = length(game$players), byrow = T) %>%
-                data.frame(stringsAsFactors = FALSE) %>%
-                set_colnames(c("Player", "Cards"))
-            }, include.colnames = FALSE)
-          )
-        },
-        if (!is.null(game$hands)) {
-          list(
-            h5("Known cards:"),
-            renderTable(format_hands(game$hands), include.colnames = FALSE, sanitize.text.function = function(x) x)
-          )
-        },
-        if (length(game$history) > 0) {
-          history <- game$history
-          list(
-            h5("History:"),
-            renderTable({
-              history %>%
-                unlist() %>%
-                matrix(nrow = length(history), byrow = T) %>%
-                data.frame(stringsAsFactors = FALSE) %>%
-                set_colnames(c("Player", "Action ID"))
-            }, include.colnames = FALSE)
-          )
-        },
-        if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
-          list(
-            h5("Make your move:"),
-            selectInput("bet_id", NULL, setNames(0:87, head(actions$description, -1)), selected = "Check"),
-            actionButton("bet", "Confirm bet"),
-            actionButton("check", "Check")
-          )
-        }
+        history_table,
+        action_menu
       )
     }
   })
