@@ -55,3 +55,21 @@ format_history <- function(history) {
     set_colnames(c("Player", "Action ID")) %>%
     mutate(`Action ID` = sapply(`Action ID`, function(id) actions$description[as.numeric(id) + 1]))
 }
+
+check_if_move_needed <- function(nickname, game) {
+  output <- FALSE
+  # Check if the user is a player
+  if (!is.null(nickname)) { 
+    # Check if their nickname matches the current nickname
+    if (catch_null(nickname) == catch_null(game$cp_nickname)) {
+      # Check if the history is either empty ...
+      if (length(game$history) == 0) {
+        output <- TRUE
+        # ... or in other ways indicates that the round hasn't ended
+      } else if (as.numeric(last(game$history)$action_id) != 89) {
+        output <- TRUE
+      }
+    }
+  }
+  return(output)
+}

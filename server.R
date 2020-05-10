@@ -19,6 +19,7 @@ shinyServer(function(input, output) {
   nickname <- reactiveVal(NULL)
   game <- reactiveValues()
   games <- reactiveVal()
+  new_round_available <- reactiveVal(FALSE)
   
   game_info_loaded <- reactiveVal(FALSE)
   
@@ -263,12 +264,19 @@ shinyServer(function(input, output) {
           )
         }
         
-        action_menu <- if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
+        action_menu <- if (check_if_move_needed(nickname(), game)) {
           list(
             h5("Make your move:"),
             selectInput("bet_id", NULL, setNames(0:87, actions$description[1:88])),
             actionButton("bet", "Confirm bet"),
             actionButton("check", "Check")
+          )
+        }
+        
+        update_button <- if(new_round_available()) {
+          list(
+            br(),
+            actionButton("update_game", "Go to latest round")
           )
         }
         
@@ -278,13 +286,15 @@ shinyServer(function(input, output) {
             leave_button,
             general_and_cards_info,
             history_table,
-            action_menu
+            action_menu,
+            update_button
           )
         )
       }
     }
   })
   
+  # Automatically update the state of the round every 500 miliseconds, but don't automatically display new round
   observe({
     invalidateLater(500)
     if (scene() == "game") {
@@ -295,9 +305,38 @@ shinyServer(function(input, output) {
       } else if (status_code(response) != 200) {
         shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
       } else {
-        lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
+        if (catch_null(game$status) != "Running" | content(response)$round_number == catch_null(game$round_number)) {
+          # If a game hasn't progressed to another round, just update the info
+          lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
+        } else {
+          # If a game has progressed to another round, update info for the last round seen by user and inform user that new round is available
+          if (!is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid(), "&round=", game$round_number)), silent = TRUE)
+          if (is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid(), "&round=", game$round_number)), silent = TRUE)
+          if (is_empty_response(response)) {
+            shinyalert("Error", "There was an error querying the game engine")
+          } else if (status_code(response) != 200) {
+            shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+          } else {
+            lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
+          }
+          new_round_available(TRUE)
+        }
         game_info_loaded(TRUE)
       }
+    }
+  })
+  
+  # Manually update the game to the latest state
+  observeEvent(input$update_game, {
+    if (!is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid())), silent = TRUE)
+    if (is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid())), silent = TRUE)
+    if (is_empty_response(response)) {
+      shinyalert("Error", "There was an error querying the game engine")
+    } else if (status_code(response) != 200) {
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+    } else {
+      lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
+      new_round_available(FALSE)
     }
   })
   
