@@ -52,5 +52,6 @@ format_history <- function(history) {
     unlist() %>%
     matrix(nrow = length(history), byrow = T) %>%
     data.frame(stringsAsFactors = FALSE) %>%
-    set_colnames(c("Player", "Action ID"))
+    set_colnames(c("Player", "Action ID")) %>%
+    mutate(`Action ID` = sapply(`Action ID`, function(id) actions$description[as.numeric(id) + 1]))
 }

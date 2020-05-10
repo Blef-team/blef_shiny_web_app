@@ -1,4 +1,4 @@
-﻿action_id,description
+action_id,description
 0,High card: 9
 1,High card: 10
 2,High card: J
@@ -88,3 +88,4 @@
 86,Great flush: hearts
 87,Great flush: spades
 88,Check
+89,(Lost the round)

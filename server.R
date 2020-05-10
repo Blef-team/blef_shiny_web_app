@@ -266,7 +266,7 @@ shinyServer(function(input, output) {
         action_menu <- if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
           list(
             h5("Make your move:"),
-            selectInput("bet_id", NULL, setNames(0:87, head(actions$description, -1)), selected = "Check"),
+            selectInput("bet_id", NULL, setNames(0:87, actions$description[1:88])),
             actionButton("bet", "Confirm bet"),
             actionButton("check", "Check")
           )
