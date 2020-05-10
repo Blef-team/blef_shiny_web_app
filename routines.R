@@ -48,12 +48,16 @@ format_players <- function(players) {
 }
 
 format_history <- function(history) {
-  history %>%
-    unlist() %>%
-    matrix(nrow = length(history), byrow = T) %>%
-    data.frame(stringsAsFactors = FALSE) %>%
-    set_colnames(c("Player", "Action ID")) %>%
-    mutate(`Action ID` = sapply(`Action ID`, function(id) actions$description[as.numeric(id) + 1]))
+  if (length(history) == 0) {
+    return(NULL)
+  } else {
+    history %>%
+      unlist() %>%
+      matrix(nrow = length(history), byrow = T) %>%
+      data.frame(stringsAsFactors = FALSE) %>%
+      set_colnames(c("Player", "Action ID")) %>%
+      mutate(`Action ID` = sapply(`Action ID`, function(id) actions$description[as.numeric(id) + 1]))
+  }
 }
 
 check_if_move_needed <- function(nickname, game) {
