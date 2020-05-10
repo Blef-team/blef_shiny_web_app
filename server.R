@@ -179,19 +179,6 @@ shinyServer(function(input, output) {
   
   output$game_scene <- renderUI({
     if (game_info_loaded()) {
-      game_info_table <- data.frame(
-        keys = c("Game UUID", "Admin nickname", "Game public", "Game status", "Current round number", "Maximum allowed cards", "Current player"),
-        values = as.character(c(game_uuid(), game$admin_nickname, ifelse(game$public, "Yes", "No"), game$status, game$round_number, game$max_cards, catch_null(game$cp_nickname)))
-      )
-      
-      pre_game_buttons <- if (game$status == "Not started" & catch_null(nickname()) == game$admin_nickname) {
-        list(
-          br(),
-          start_button <- actionButton("start", "Start game"),
-          privacy_button <- if (!game$public) actionButton("make_public", "Make public"),
-          privacy_button <- if (game$public) actionButton("make_private", "Make private")
-        )
-      }
       
       leave_button <- if (game$status == "Finished" | is.null(player_uuid())) list(
         actionButton("leave", "Leave to lobby"),
@@ -199,12 +186,44 @@ shinyServer(function(input, output) {
         br()
       )
       
-      if (game$status == "Running") {
-        if (length(game$hands) == 1) {
-          print(game$hands)
-          print(format_hand(game$hands[[1]]$hand))
-          # If you only see your own hand, generate both a 'your hand' row and a 'cards per player' object
-          general_and_cards_info <- list(
+      if (game$status == "Not started") {
+        game_info_table <- data.frame(
+          keys = c("Game UUID", "Admin nickname", "Game public"),
+          values = as.character(c(game_uuid(), game$admin_nickname, ifelse(game$public, "Yes", "No")))
+        )
+        
+        players_table <- format_players(game$players)$Player
+        
+        admin_panel <- if (catch_null(nickname()) == game$admin_nickname) {
+          list(
+            start_button <- actionButton("start", "Start game"),
+            privacy_button <- if (!game$public) actionButton("make_public", "Make public"),
+            privacy_button <- if (game$public) actionButton("make_private", "Make private")
+          )
+        }
+        
+        return(
+          mainPanel(
+            br(),
+            leave_button,
+            renderTable(game_info_table, include.colnames = FALSE),
+            h5("Players:"),
+            renderTable(players_table, include.colnames = FALSE),
+            h5("The game has not started yet."),
+            admin_panel
+          )
+        )
+      } else {
+        
+        game_info_table <- data.frame(
+          keys = c("Game UUID", "Admin nickname", "Game public", "Game status", "Current round number", "Maximum allowed cards", "Current player"),
+          values = as.character(c(game_uuid(), game$admin_nickname, ifelse(game$public, "Yes", "No"), game$status, game$round_number, game$max_cards, catch_null(game$cp_nickname)))
+        )
+        
+        if (game$status == "Running") {
+          if (length(game$hands) == 1) {
+            # If you only see your own hand, generate both a 'your hand' row and a 'cards per player' object
+            general_and_cards_info <- list(
               renderTable(
                 rbind(game_info_table, data.frame(keys = "Your cards", values = format_hand(game$hands[[1]]$hand))), 
                 include.colnames = FALSE, 
@@ -213,60 +232,56 @@ shinyServer(function(input, output) {
               h5("Cards per player:"),
               renderTable(format_players(game$players), include.colnames = FALSE)
             )
-        } else if (length(game$hands) > 1) {
-          # If you can show everybody's (more than 1 person's) hands, don't show cards per player
-          general_and_cards_info <- 
-            list(
+          } else if (length(game$hands) > 1) {
+            # If you can show everybody's (more than 1 person's) hands, don't show cards per player
+            general_and_cards_info <- 
+              list(
+                renderTable(game_info_table, include.colnames = FALSE),
+                h5("Hands:"),
+                renderTable(format_hands(game$hands), include.colnames = FALSE)
+              )
+          } else if (length(game$hands) == 0) {
+            # If you can't show anybody's hand, there is no hand object to generate
+            general_and_cards_info <- list(
               renderTable(game_info_table, include.colnames = FALSE),
-              h5("Hands:"),
-              renderTable(format_hands(game$hands), include.colnames = FALSE)
-            )
-        } else if (length(game$hands) == 0) {
-          # If you can't show anybody's hand, there is no hand object to generate
+              h5("Cards per player:"),
+              renderTable(format_players(game$players), include.colnames = FALSE)
+            ) 
+          }
+        } else if (game$status == "Finished") {
           general_and_cards_info <- list(
             renderTable(game_info_table, include.colnames = FALSE),
             h5("Cards per player:"),
             renderTable(format_players(game$players), include.colnames = FALSE)
-          ) 
+          )
         }
-      } else if (game$status == "Not started") {
-        general_and_cards_info <- list(
-          renderTable(game_info_table, include.colnames = FALSE),
-          h5("Cards per player:"),
-          renderTable(format_players(game$players), include.colnames = FALSE)
-        ) 
-      } else if (game$status == "Finished") {
-        general_and_cards_info <- list(
-          renderTable(game_info_table, include.colnames = FALSE),
-          h5("Cards per player:"),
-          renderTable(format_players(game$players), include.colnames = FALSE)
-        ) 
-      }
-      
-      history_table <- if (length(game$history) > 0) {
-        list(
-          h5("History:"),
-          renderTable(format_history(game$history), include.colnames = FALSE)
+        
+        history_table <- if (length(game$history) > 0) {
+          list(
+            h5("History:"),
+            renderTable(format_history(game$history), include.colnames = FALSE)
+          )
+        }
+        
+        action_menu <- if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
+          list(
+            h5("Make your move:"),
+            selectInput("bet_id", NULL, setNames(0:87, head(actions$description, -1)), selected = "Check"),
+            actionButton("bet", "Confirm bet"),
+            actionButton("check", "Check")
+          )
+        }
+        
+        return(
+          mainPanel(
+            br(),
+            leave_button,
+            general_and_cards_info,
+            history_table,
+            action_menu
+          )
         )
       }
-      
-      action_menu <- if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
-        list(
-          h5("Make your move:"),
-          selectInput("bet_id", NULL, setNames(0:87, head(actions$description, -1)), selected = "Check"),
-          actionButton("bet", "Confirm bet"),
-          actionButton("check", "Check")
-        )
-      }
-      
-      mainPanel(
-        br(),
-        leave_button,
-        general_and_cards_info,
-        pre_game_buttons,
-        history_table,
-        action_menu
-      )
     }
   })
   
