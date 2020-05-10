@@ -239,7 +239,7 @@ shinyServer(function(input, output) {
               list(
                 renderTable(game_info_table, include.colnames = FALSE),
                 h5("Hands:"),
-                renderTable(format_hands(game$hands), include.colnames = FALSE)
+                renderTable(format_all_hands(game$hands), include.colnames = FALSE, sanitize.text.function = function(x) x)
               )
           } else if (length(game$hands) == 0) {
             # If you can't show anybody's hand, there is no hand object to generate
