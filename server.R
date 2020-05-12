@@ -11,7 +11,8 @@ names <- read_csv("names.csv", col_types = cols())
 actions <- read_csv("action_descriptions.csv", col_types = cols())
 source("routines.R", local = TRUE)
 
-shinyServer(function(input, output) {
+shinyServer(function(input, output, session) {
+  
   scene <- reactiveVal("lobby")
   action_initialised <- reactiveVal("none")
   game_uuid <- reactiveVal(NULL)
@@ -22,6 +23,17 @@ shinyServer(function(input, output) {
   new_round_available <- reactiveVal(FALSE)
   
   game_info_loaded <- reactiveVal(FALSE)
+  
+  observe({
+    if (session$clientData$url_search != "") {
+      query <- parseQueryString(session$clientData$url_search) %>%
+        make_null_from_empty()
+      game_uuid(query$game_uuid)
+      player_uuid(query$player_uuid)
+      nickname(query$nickname)
+      scene("game")
+    }
+  })
   
   output$lobby_scene <- renderUI({
     if (scene() == "lobby") {
@@ -119,6 +131,7 @@ shinyServer(function(input, output) {
           game_uuid(created_game_uuid)
           player_uuid(content(response)$player_uuid)
           nickname(effective_nickname)
+          put_variables_in_URL(game_uuid(), player_uuid(), nickname())
           scene("game")
           action_initialised("none")
         }
@@ -144,6 +157,7 @@ shinyServer(function(input, output) {
         game_uuid(input$game_uuid)
         player_uuid(content(response)$player_uuid)
         nickname(effective_nickname)
+        put_variables_in_URL(game_uuid(), player_uuid(), nickname())
         scene("game")
         action_initialised("none")
       }
@@ -152,7 +166,6 @@ shinyServer(function(input, output) {
   
   observeEvent(input$return, {
     scene("game")
-    action_initialised("none")
   })
   
   observeEvent(input$observe, {
@@ -169,6 +182,7 @@ shinyServer(function(input, output) {
       game_uuid(input$game_uuid)
       player_uuid(NULL)
       nickname(NULL)
+      put_variables_in_URL(game_uuid(), player_uuid(), nickname())
       scene("game")
       action_initialised("none")
     }
