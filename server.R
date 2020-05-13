@@ -21,6 +21,7 @@ shinyServer(function(input, output, session) {
   game <- reactiveValues()
   games <- reactiveVal()
   new_round_available <- reactiveVal(FALSE)
+  data_recovered <- reactiveVal(FALSE)
   
   try_enter_game_room <- function(game_uuid_wanted, player_uuid_wanted, nickname_wanted) {
     if (!is.null(player_uuid_wanted)) response <- try(GET(paste0(base_path, "games/", game_uuid_wanted, "?player_uuid=", player_uuid_wanted)), silent = TRUE)
@@ -42,10 +43,13 @@ shinyServer(function(input, output, session) {
   }
   
   observe({
-    if (session$clientData$url_search != "") {
-      query <- parseQueryString(session$clientData$url_search) %>%
-        map_empty_strings_to_null()
-      try_enter_game_room(query$game_uuid, query$player_uuid, query$nickname)
+    if (!data_recovered()) {
+      if (session$clientData$url_search != "") {
+        query <- parseQueryString(session$clientData$url_search) %>%
+          map_empty_strings_to_null()
+        try_enter_game_room(query$game_uuid, query$player_uuid, query$nickname)
+        data_recovered(TRUE)
+      }
     }
   })
   
