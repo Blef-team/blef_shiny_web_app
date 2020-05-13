@@ -49,7 +49,7 @@ format_players <- function(players) {
 
 format_history <- function(history) {
   if (length(history) == 0) {
-    return(NULL)
+    data.frame(message = "There hasn't been any bet yet.")
   } else {
     history %>%
       unlist() %>%
