@@ -83,7 +83,7 @@ put_variables_in_URL <- function(game_uuid, player_uuid, nickname) {
 }
 
 # When putting variables in the URL, NULL variables are converted to empty parameters. We have to convert them back to NULL.
-make_null_from_empty <- function(list) {
+map_empty_strings_to_null <- function(list) {
   return(
     lapply(list, function(x) {
       if (x == "") {
