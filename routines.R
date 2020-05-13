@@ -77,3 +77,20 @@ check_if_move_needed <- function(nickname, game) {
   }
   return(output)
 }
+
+put_variables_in_URL <- function(game_uuid, player_uuid, nickname) {
+  updateQueryString(paste0("?game_uuid=", game_uuid, "&player_uuid=", player_uuid, "&nickname=", nickname))
+}
+
+# When putting variables in the URL, NULL variables are converted to empty parameters. We have to convert them back to NULL.
+map_empty_strings_to_null <- function(list) {
+  return(
+    lapply(list, function(x) {
+      if (x == "") {
+        return(NULL)
+      } else {
+        return(x)
+      }
+    })
+  )
+}
