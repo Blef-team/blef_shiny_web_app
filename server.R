@@ -44,11 +44,8 @@ shinyServer(function(input, output, session) {
   observe({
     if (session$clientData$url_search != "") {
       query <- parseQueryString(session$clientData$url_search) %>%
-        make_null_from_empty()
-      game_uuid(query$game_uuid)
-      player_uuid(query$player_uuid)
-      nickname(query$nickname)
-      scene("game")
+        map_empty_strings_to_null()
+      try_enter_game_room(query$game_uuid, query$player_uuid, query$nickname)
     }
   })
   
