@@ -22,7 +22,24 @@ shinyServer(function(input, output, session) {
   games <- reactiveVal()
   new_round_available <- reactiveVal(FALSE)
   
-  game_info_loaded <- reactiveVal(FALSE)
+  try_enter_game_room <- function(game_uuid_wanted, player_uuid_wanted, nickname_wanted) {
+    if (!is.null(player_uuid_wanted)) response <- try(GET(paste0(base_path, "games/", game_uuid_wanted, "?player_uuid=", player_uuid_wanted)), silent = TRUE)
+    if (is.null(player_uuid_wanted)) response <- try(GET(paste0(base_path, "games/", game_uuid_wanted)), silent = TRUE)
+    if (is_empty_response(response)) {
+      shinyalert("Error", "There was an error querying the game engine")
+    } else if (status_code(response) != 200) {
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+    } else {
+      game_uuid(game_uuid_wanted)
+      player_uuid(player_uuid_wanted)
+      nickname(nickname_wanted)
+      put_variables_in_URL(game_uuid(), player_uuid(), nickname())
+      lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
+      new_round_available(FALSE)
+      scene("game")
+      action_initialised("none")
+    }
+  }
   
   observe({
     if (session$clientData$url_search != "") {
@@ -128,12 +145,7 @@ shinyServer(function(input, output, session) {
         } else if (status_code(response) != 200) {
           shinyalert("Error", paste0("The game was created with UUID ", created_game_uuid, " but, while trying to join, the engine returned an error saying: ", content(response)$error))
         } else {
-          game_uuid(created_game_uuid)
-          player_uuid(content(response)$player_uuid)
-          nickname(effective_nickname)
-          put_variables_in_URL(game_uuid(), player_uuid(), nickname())
-          scene("game")
-          action_initialised("none")
+          try_enter_game_room(created_game_uuid, content(response)$player_uuid, effective_nickname)
         }
       }
     }
@@ -154,12 +166,7 @@ shinyServer(function(input, output, session) {
       } else if (status_code(response) != 200) {
         shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
       } else {
-        game_uuid(input$game_uuid)
-        player_uuid(content(response)$player_uuid)
-        nickname(effective_nickname)
-        put_variables_in_URL(game_uuid(), player_uuid(), nickname())
-        scene("game")
-        action_initialised("none")
+        try_enter_game_room(input$game_uuid, content(response)$player_uuid, effective_nickname)
       }
     }
   })
@@ -173,19 +180,7 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$confirm_observe, {
-    response <- try(GET(paste0(base_path, "games/", input$game_uuid)), silent = TRUE)
-    if (is_empty_response(response)) {
-      shinyalert("Error", "There was an error querying the game engine")
-    } else if (status_code(response) != 200) {
-      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
-    } else {
-      game_uuid(input$game_uuid)
-      player_uuid(NULL)
-      nickname(NULL)
-      put_variables_in_URL(game_uuid(), player_uuid(), nickname())
-      scene("game")
-      action_initialised("none")
-    }
+    try_enter_game_room(input$game_uuid, NULL, NULL)
   })
   
   observeEvent(input$cancel, {
@@ -193,7 +188,7 @@ shinyServer(function(input, output, session) {
   })
   
   output$game_scene <- renderUI({
-    if (game_info_loaded()) {
+    if (scene() == "game") {
       
       leave_button <- if (game$status == "Finished" | is.null(player_uuid())) list(
         actionButton("leave", "Leave to lobby"),
@@ -335,7 +330,6 @@ shinyServer(function(input, output, session) {
           }
           new_round_available(TRUE)
         }
-        game_info_loaded(TRUE)
       }
     }
   })
@@ -356,7 +350,6 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$leave, {
     scene("lobby")
-    game_info_loaded(FALSE)
   })
   
   observeEvent(input$start, {
