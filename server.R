@@ -22,8 +22,6 @@ shinyServer(function(input, output, session) {
   games <- reactiveVal()
   new_round_available <- reactiveVal(FALSE)
   
-  game_info_loaded <- reactiveVal(FALSE)
-  
   try_enter_game_room <- function(game_uuid_wanted, player_uuid_wanted, nickname_wanted) {
     if (!is.null(player_uuid_wanted)) response <- try(GET(paste0(base_path, "games/", game_uuid_wanted, "?player_uuid=", player_uuid_wanted)), silent = TRUE)
     if (is.null(player_uuid_wanted)) response <- try(GET(paste0(base_path, "games/", game_uuid_wanted)), silent = TRUE)
@@ -37,7 +35,6 @@ shinyServer(function(input, output, session) {
       nickname(nickname_wanted)
       put_variables_in_URL(game_uuid(), player_uuid(), nickname())
       lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
-      game_info_loaded(TRUE)
       new_round_available(FALSE)
       scene("game")
       action_initialised("none")
@@ -191,7 +188,7 @@ shinyServer(function(input, output, session) {
   })
   
   output$game_scene <- renderUI({
-    if (game_info_loaded()) {
+    if (scene() == "game") {
       
       leave_button <- if (game$status == "Finished" | is.null(player_uuid())) list(
         actionButton("leave", "Leave to lobby"),
@@ -333,7 +330,6 @@ shinyServer(function(input, output, session) {
           }
           new_round_available(TRUE)
         }
-        game_info_loaded(TRUE)
       }
     }
   })
@@ -354,7 +350,6 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$leave, {
     scene("lobby")
-    game_info_loaded(FALSE)
   })
   
   observeEvent(input$start, {
