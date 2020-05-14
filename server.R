@@ -227,8 +227,8 @@ shinyServer(function(input, output, session) {
       } else {
         
         general_info <- data.frame(
-          keys = c("Game UUID", "Admin nickname", "Game public", "Game status", "Current round number", "Maximum allowed cards"),
-          values = as.character(c(game_uuid(), game$admin_nickname, ifelse(game$public, "Yes", "No"), game$status, game$round_number, game$max_cards))
+          keys = c("Game public", "Maximum allowed cards"),
+          values = as.character(c(ifelse(game$public, "Yes", "No"), game$max_cards))
         )
         
         history_table <- list(
@@ -237,7 +237,7 @@ shinyServer(function(input, output, session) {
         )
         
         cp_info <- if (!is.null(game$cp_nickname) & catch_null(game$cp_nickname) != catch_null(nickname())) {
-          h5(paste0("The current player is: ", game$cp_nickname))
+          h5(paste0("Current player: ", game$cp_nickname))
         }
         
         if (game$status == "Running") {
@@ -254,7 +254,6 @@ shinyServer(function(input, output, session) {
                 sanitize.text.function = function(x) x
               ),
               history_table,
-              cp_info,
               h5("Your hand:"), 
               renderUI(HTML(format_hand(game$hands[[1]]$hand)))
             )
@@ -287,8 +286,7 @@ shinyServer(function(input, output, session) {
                 include.colnames = FALSE, 
                 sanitize.text.function = function(x) x
               ), 
-              history_table,
-              cp_info
+              history_table
             )  
           }
         } else if (game$status == "Finished") {
@@ -324,13 +322,20 @@ shinyServer(function(input, output, session) {
           )
         }
         
+        status_message <- if (game$status == "Finished") {
+          h5("The game has finished.")
+        } else if (length(game$hands) == 1 | length(game$hands) == 0) {
+          cp_info
+        }
+        
         return(
           mainPanel(
             br(),
             leave_button,
             game_info,
             action_menu,
-            update_button
+            update_button,
+            status_message
           )
         )
       }
