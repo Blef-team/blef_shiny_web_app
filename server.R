@@ -227,8 +227,8 @@ shinyServer(function(input, output, session) {
       } else {
         
         general_info <- data.frame(
-          keys = c("Game UUID", "Admin nickname", "Game public", "Game status", "Current round number", "Maximum allowed cards"),
-          values = as.character(c(game_uuid(), game$admin_nickname, ifelse(game$public, "Yes", "No"), game$status, game$round_number, game$max_cards))
+          keys = c("Game public", "Game status", "Maximum allowed cards"),
+          values = as.character(c(ifelse(game$public, "Yes", "No"), game$status, game$max_cards))
         )
         
         history_table <- list(
