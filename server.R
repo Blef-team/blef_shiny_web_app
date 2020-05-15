@@ -307,10 +307,19 @@ shinyServer(function(input, output, session) {
         }
         
         action_menu <- if (check_if_move_needed(nickname(), game)) {
+          last_bet <- if (length(game$history) > 0) last(game$history)$action_id else -1
+          if (last_bet < 87) {
+            bet_dropdown <- selectInput("bet_id", NULL, setNames((last_bet + 1):87, actions$description[(last_bet + 2):88]))
+            confirm_button <- actionButton("bet", "Confirm bet")
+          } else {
+            bet_dropdown <- NULL
+            confirm_button <- NULL
+          }
+
           list(
             h5("Make your move:"),
-            selectInput("bet_id", NULL, setNames(0:87, actions$description[1:88])),
-            actionButton("bet", "Confirm bet"),
+            bet_dropdown,
+            confirm_button,
             actionButton("check", "Check")
           )
         }
@@ -344,7 +353,7 @@ shinyServer(function(input, output, session) {
   
   # Automatically update the state of the round every 500 miliseconds, but don't automatically display new round
   observe({
-    invalidateLater(500)
+    invalidateLater(1000)
     if (scene() == "game") {
       if (!is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid())), silent = TRUE)
       if (is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid())), silent = TRUE)
