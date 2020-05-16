@@ -40,11 +40,29 @@ format_hand <- function(hand) {
 }
 
 format_players <- function(players) {
-  players %>%
+  player_table <- players %>%
     unlist() %>%
     matrix(nrow = length(players), byrow = T) %>%
     data.frame(stringsAsFactors = FALSE) %>%
     set_colnames(c("Player", "Cards"))
+  
+  # Check if some players have already lost
+  if (any(player_table$Cards == "0")) {
+    # Check if the game is still going on
+    if (sum(player_table$Cards != "0") > 1) {
+      player_table$Cards <- sapply(player_table$Cards, function(n) {
+        text <- if (n == "0") "Lost" else n
+        return(text)
+      })
+    } else {
+      # If the game has finished
+      player_table$Cards <- sapply(player_table$Cards, function(n) {
+        text <- if (n == "0") "<b>Lost</b>" else "<b>Won</b>"
+        return(text)
+      })
+    }
+  }
+  return(player_table)
 }
 
 format_history <- function(history) {
