@@ -244,62 +244,37 @@ shinyServer(function(input, output, session) {
           if (length(game$hands) == 1) {
             # If you only see your own hand, generate both a 'your hand' row and a 'cards per player' object
             game_info <- list(
-              renderTable(
-                rbind(
-                  general_info,
-                  data.frame(keys = "<b>Cards per player:</b>", values = ""),
-                  format_players(game$players) %>% set_colnames(c("keys", "values"))
-                ), 
-                include.colnames = FALSE, 
-                sanitize.text.function = function(x) x
-              ),
+              renderTable(general_info, include.colnames = FALSE, sanitize.text.function = function(x) x), 
+              h5("Cards per player:"),
+              renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x),
               history_table,
               h5("Your hand:"), 
               renderUI(HTML(format_hand(game$hands[[1]]$hand)))
             )
           } else if (length(game$hands) > 1) {
             # If you can show everybody's (more than 1 person's) hands, don't show cards per player
-            game_info <- 
-              list(
-                renderTable(
-                  rbind(
-                    general_info,
-                    data.frame(keys = "<b>Cards per player:</b>", values = ""),
-                    format_players(game$players) %>% set_colnames(c("keys", "values"))
-                  ), 
-                  include.colnames = FALSE, 
-                  sanitize.text.function = function(x) x
-                ),
-                history_table,
-                h5("Hands:"),
-                renderTable(format_all_hands(game$hands), include.colnames = FALSE, sanitize.text.function = function(x) x)
-              )
+            game_info <- list(
+              renderTable(general_info, include.colnames = FALSE, sanitize.text.function = function(x) x), 
+              h5("Cards per player:"),
+              renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x),
+              history_table,
+              h5("Hands:"),
+              renderTable(format_all_hands(game$hands), include.colnames = FALSE, sanitize.text.function = function(x) x)
+            )
           } else if (length(game$hands) == 0) {
             # If you can't show anybody's hand, there is no hand object to generate
             game_info <- list(
-              renderTable(
-                rbind(
-                  general_info,
-                  data.frame(keys = "<b>Cards per player:</b>", values = ""),
-                  format_players(game$players) %>% set_colnames(c("keys", "values"))
-                ),
-                include.colnames = FALSE, 
-                sanitize.text.function = function(x) x
-              ), 
+              renderTable(general_info, include.colnames = FALSE, sanitize.text.function = function(x) x), 
+              h5("Cards per player:"),
+              renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x),
               history_table
             )  
           }
         } else if (game$status == "Finished") {
           game_info <- list(
-            renderTable(
-              rbind(
-                general_info,
-                data.frame(keys = "<b>Results:</b>", values = ""),
-                format_players(game$players) %>% set_colnames(c("keys", "values"))
-              ),
-              include.colnames = FALSE,
-              sanitize.text.function = function(x) x
-            ), 
+            renderTable(general_info, include.colnames = FALSE, sanitize.text.function = function(x) x), 
+            h5("Results:"),
+            renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x),
             h5("Hands:"),
             renderTable(format_all_hands(game$hands), include.colnames = FALSE, sanitize.text.function = function(x) x),
             history_table
