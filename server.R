@@ -102,7 +102,7 @@ shinyServer(function(input, output, session) {
       if (is_empty_response(response)) {
         shinyalert("Error", "There was an error querying the game engine")
       } else {
-        if (length(response) > 0) {
+        if (length(content(response)) > 0) {
           raw_games <- content(response)
           for (i in 1:length(raw_games)) raw_games[[i]]$players <- paste(raw_games[[i]]$players, collapse = ", ")
           games(
