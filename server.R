@@ -283,19 +283,12 @@ shinyServer(function(input, output, session) {
         
         action_menu <- if (check_if_move_needed(nickname(), game)) {
           last_bet <- if (length(game$history) > 0) last(game$history)$action_id else -1
-          if (last_bet < 87) {
-            bet_dropdown <- selectInput("bet_id", NULL, setNames((last_bet + 1):87, actions$description[(last_bet + 2):88]))
-            confirm_button <- actionButton("bet", "Confirm bet")
-          } else {
-            bet_dropdown <- NULL
-            confirm_button <- NULL
-          }
-
+          
           list(
             h5("Make your move:"),
-            bet_dropdown,
-            confirm_button,
-            actionButton("check", "Check")
+            if (last_bet < 87) selectInput("bet_id", NULL, setNames((last_bet + 1):87, actions$description[(last_bet + 2):88])),
+            if (last_bet < 87) actionButton("bet", "Confirm bet"),
+            if (length(game$history) > 0) actionButton("check", "Check")
           )
         }
         
