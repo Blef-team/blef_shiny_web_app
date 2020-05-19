@@ -6,7 +6,7 @@ library(stringr)
 library(httr)
 library(dplyr)
 
-base_path <- "http://18.132.35.89:8001/v2/"
+base_path <- "http://18.132.35.89:8002/v2.1/"
 names <- read_csv("names.csv", col_types = cols())
 actions <- read_csv("action_descriptions.csv", col_types = cols())
 source("routines.R", local = TRUE)
