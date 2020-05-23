@@ -65,27 +65,27 @@ action_id,description
 63,"Full house, As over Js"
 64,"Full house, As over Qs"
 65,"Full house, As over Ks"
-66,"Flush, clubs"
-67,"Flush, diamonds"
-68,"Flush, hearts"
-69,"Flush, spades"
+66,Flush ♣
+67,Flush ♦
+68,Flush ♥
+69,Flush ♠
 70,"Four of a kind, 9s"
 71,"Four of a kind, 10s"
 72,"Four of a kind, Js"
 73,"Four of a kind, Qs"
 74,"Four of a kind, Ks"
 75,"Four of a kind, As"
-76,"Small straight flush (9-K), clubs"
-77,"Small straight flush (9-K), diamonds"
-78,"Small straight flush (9-K), hearts"
-79,"Small straight flush (9-K), spades"
-80,"Big straight flush (10-A), clubs"
-81,"Big straight flush (10-A), diamonds"
-82,"Big straight flush (10-A), hearts"
-83,"Big straight flush (10-A), spades"
-84,"Great straight flush (9-A), clubs"
-85,"Great straight flush (9-A), diamonds"
-86,"Great straight flush (9-A), hearts"
-87,"Great straight flush (9-A), spades"
+76,Small straight flush (9-K) ♣
+77,Small straight flush (9-K) ♦
+78,Small straight flush (9-K) ♥
+79,Small straight flush (9-K) ♠
+80,Big straight flush (10-A) ♣
+81,Big straight flush (10-A) ♦
+82,Big straight flush (10-A) ♥
+83,Big straight flush (10-A) ♠
+84,Great straight flush (9-A) ♣
+85,Great straight flush (9-A) ♦
+86,Great straight flush (9-A) ♥
+87,Great straight flush (9-A) ♠
 88,Check
 89,(Lost the round)
