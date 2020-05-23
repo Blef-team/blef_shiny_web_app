@@ -42,6 +42,18 @@ shinyServer(function(input, output, session) {
     }
   }
   
+  try_update_to_current_state <- function(game_uuid, player_uuid, round = -1) {
+    if (!is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid, "?player_uuid=", player_uuid, "&round=", round)), silent = TRUE)
+    if (is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid, "&round=", round)), silent = TRUE)
+    if (is_empty_response(response)) {
+      shinyalert("Error", "There was an error querying the game engine")
+    } else if (status_code(response) != 200) {
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+    } else {
+      lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
+    }
+  }
+  
   observe({
     if (!data_recovered()) {
       if (session$clientData$url_search != "") {
@@ -377,6 +389,7 @@ shinyServer(function(input, output, session) {
     } else if (status_code(response) != 202) {
       shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     }
+    try_update_to_current_state(game_uuid(), player_uuid())
   })
   
   observeEvent(input$make_public, {
@@ -386,6 +399,7 @@ shinyServer(function(input, output, session) {
     } else if (status_code(response) != 200) {
       shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     }
+    try_update_to_current_state(game_uuid(), player_uuid())
   })
   
   observeEvent(input$make_private, {
@@ -395,6 +409,7 @@ shinyServer(function(input, output, session) {
     } else if (status_code(response) != 200) {
       shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     }
+    try_update_to_current_state(game_uuid(), player_uuid())
   })
   
   observeEvent(input$bet, {
@@ -404,6 +419,7 @@ shinyServer(function(input, output, session) {
     } else if (status_code(response) != 200) {
       shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     }
+    try_update_to_current_state(game_uuid(), player_uuid(), game$round_number)
   })
   
   observeEvent(input$check, {
@@ -413,5 +429,6 @@ shinyServer(function(input, output, session) {
     } else if (status_code(response) != 200) {
       shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     }
+    try_update_to_current_state(game_uuid(), player_uuid(), game$round_number)
   })
 })
