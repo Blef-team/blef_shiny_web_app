@@ -344,7 +344,7 @@ shinyServer(function(input, output, session) {
       } else if (status_code(response) != 200) {
         shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
       } else {
-        if (catch_null(game$status) != "Running" | content(response)$round_number == catch_null(game$round_number)) {
+        if (catch_null(game$status == "Not started" | (content(response)$status) != "Finished" & content(response)$round_number == catch_null(game$round_number))) {
           # If a game hasn't progressed to another round, just update the info
           lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
         } else {
