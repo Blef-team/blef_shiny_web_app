@@ -336,7 +336,7 @@ shinyServer(function(input, output, session) {
   # Automatically update the state of the round every 500 miliseconds, but don't automatically display new round
   observe({
     invalidateLater(1000)
-    if (scene() == "game") {
+    if (scene() == "game" & catch_null(game$status) != "Finished" & !catch_null(new_round_available())) {
       if (!is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid())), silent = TRUE)
       if (is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid())), silent = TRUE)
       if (is_empty_response(response)) {
