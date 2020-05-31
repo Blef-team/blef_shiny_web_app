@@ -295,7 +295,7 @@ shinyServer(function(input, output, session) {
           )
         }
         
-        action_menu <- if (check_if_move_needed(nickname(), game)) {
+        action_menu <- if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
           last_bet <- if (length(game$history) > 0) last(game$history)$action_id else -1
           
           list(

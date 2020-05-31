@@ -78,24 +78,6 @@ format_history <- function(history) {
   }
 }
 
-check_if_move_needed <- function(nickname, game) {
-  output <- FALSE
-  # Check if the user is a player
-  if (!is.null(nickname)) { 
-    # Check if their nickname matches the current nickname
-    if (catch_null(nickname) == catch_null(game$cp_nickname)) {
-      # Check if the history is either empty ...
-      if (length(game$history) == 0) {
-        output <- TRUE
-        # ... or in other ways indicates that the round hasn't ended
-      } else if (as.numeric(last(game$history)$action_id) != 89) {
-        output <- TRUE
-      }
-    }
-  }
-  return(output)
-}
-
 put_variables_in_URL <- function(game_uuid, player_uuid, nickname) {
   updateQueryString(paste0("?game_uuid=", game_uuid, "&player_uuid=", player_uuid, "&nickname=", nickname))
 }
