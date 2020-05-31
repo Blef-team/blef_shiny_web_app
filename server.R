@@ -6,7 +6,7 @@ library(stringr)
 library(httr)
 library(dplyr)
 
-base_path <- "http://18.132.35.89:8002/v2.1/"
+base_path <- "http://18.132.35.89:8001/v2/"
 names <- read_csv("names.csv", col_types = cols())
 actions <- read_csv("action_descriptions.csv", col_types = cols())
 source("routines.R", local = TRUE)
@@ -295,7 +295,7 @@ shinyServer(function(input, output, session) {
           )
         }
         
-        action_menu <- if (check_if_move_needed(nickname(), game)) {
+        action_menu <- if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
           last_bet <- if (length(game$history) > 0) last(game$history)$action_id else -1
           
           list(
@@ -344,7 +344,7 @@ shinyServer(function(input, output, session) {
       } else if (status_code(response) != 200) {
         shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
       } else {
-        if (catch_null(game$status) != "Running" | content(response)$round_number == catch_null(game$round_number)) {
+        if (catch_null(game$status == "Not started" | (content(response)$status) != "Finished" & content(response)$round_number == catch_null(game$round_number))) {
           # If a game hasn't progressed to another round, just update the info
           lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
         } else {
