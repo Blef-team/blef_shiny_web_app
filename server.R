@@ -5,6 +5,7 @@ library(readr)
 library(stringr)
 library(httr)
 library(dplyr)
+library(digest)
 
 base_path <- "http://18.132.35.89:8001/v2/"
 names <- read_csv("names.csv", col_types = cols())
@@ -22,6 +23,8 @@ shinyServer(function(input, output, session) {
   games <- reactiveVal()
   new_round_available <- reactiveVal(FALSE)
   data_recovered <- reactiveVal(FALSE)
+  game_md5 <- reactiveVal("")
+  games_md5 <- reactiveVal("")
   
   try_enter_game_room <- function(game_uuid_wanted, player_uuid_wanted, nickname_wanted) {
     if (!is.null(player_uuid_wanted)) response <- try(GET(paste0(base_path, "games/", game_uuid_wanted, "?player_uuid=", player_uuid_wanted)), silent = TRUE)
@@ -113,19 +116,18 @@ shinyServer(function(input, output, session) {
       response <- try(GET(paste0(base_path, "games")), silent = TRUE)
       if (is_empty_response(response)) {
         shinyalert("Error", "There was an error querying the game engine")
-      } else {
-        if (length(content(response)) > 0) {
-          raw_games <- content(response)
-          for (i in 1:length(raw_games)) raw_games[[i]]$players <- paste(raw_games[[i]]$players, collapse = ", ")
-          games(
-            raw_games %>%
-              unlist() %>%
-              matrix(nrow = length(raw_games), byrow = T) %>%
-              data.frame(stringsAsFactors = FALSE) %>%
-              set_colnames(c("UUID", "Players", "Started")) %>%
-              mutate(UUID = sapply(UUID, function(x) HTML(paste0("<div style=\"font-family: Consolas\">", x, "</div>"))))
-          )
-        }
+      } else if (length(content(response)) > 0 & digest(content(response)) != games_md5()) {
+        raw_games <- content(response)
+        games_md5(digest(raw_games))
+        for (i in 1:length(raw_games)) raw_games[[i]]$players <- paste(raw_games[[i]]$players, collapse = ", ")
+        games(
+          raw_games %>%
+            unlist() %>%
+            matrix(nrow = length(raw_games), byrow = T) %>%
+            data.frame(stringsAsFactors = FALSE) %>%
+            set_colnames(c("UUID", "Players", "Started")) %>%
+            mutate(UUID = sapply(UUID, function(x) HTML(paste0("<div style=\"font-family: Consolas\">", x, "</div>"))))
+        )
       }
     }
   })
@@ -343,9 +345,10 @@ shinyServer(function(input, output, session) {
         shinyalert("Error", "There was an error querying the game engine")
       } else if (status_code(response) != 200) {
         shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
-      } else {
-        if (catch_null(game$status == "Not started" | (content(response)$status) != "Finished" & content(response)$round_number == catch_null(game$round_number))) {
-          # If a game hasn't progressed to another round, just update the info
+      } else if (digest(content(response)) != game_md5()) {
+        game_md5(digest(content(response)))
+        # If a game hasn't progressed to another round, just update the info
+        if (catch_null(game$status) == "Not started" | (content(response)$status == "Running" & content(response)$round_number == catch_null(game$round_number))) {
           lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
         } else {
           # If a game has progressed to another round, update info for the last round seen by user and inform user that new round is available
