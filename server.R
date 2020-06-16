@@ -341,27 +341,29 @@ shinyServer(function(input, output, session) {
     if (scene() == "game" & catch_null(game$status) != "Finished" & !catch_null(new_round_available())) {
       if (!is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid())), silent = TRUE)
       if (is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid())), silent = TRUE)
-      if (is_empty_response(response)) {
-        shinyalert("Error", "There was an error querying the game engine")
-      } else if (status_code(response) != 200) {
-        shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
-      } else if (digest(content(response)) != game_md5()) {
+      if (digest(content(response)) != game_md5()) {
         game_md5(digest(content(response)))
-        # If a game hasn't progressed to another round, just update the info
-        if (catch_null(game$status) == "Not started" | (content(response)$status == "Running" & content(response)$round_number == catch_null(game$round_number))) {
-          lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
+        if (is_empty_response(response)) {
+          shinyalert("Error", "There was an error querying the game engine")
+        } else if (status_code(response) != 200) {
+          shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
         } else {
-          # If a game has progressed to another round, update info for the last round seen by user and inform user that new round is available
-          if (!is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid(), "&round=", game$round_number)), silent = TRUE)
-          if (is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid(), "&round=", game$round_number)), silent = TRUE)
-          if (is_empty_response(response)) {
-            shinyalert("Error", "There was an error querying the game engine")
-          } else if (status_code(response) != 200) {
-            shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
-          } else {
+          # If a game hasn't progressed to another round, just update the info
+          if (catch_null(game$status) == "Not started" | (content(response)$status == "Running" & content(response)$round_number == catch_null(game$round_number))) {
             lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
+          } else {
+            # If a game has progressed to another round, update info for the last round seen by user and inform user that new round is available
+            if (!is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid(), "&round=", game$round_number)), silent = TRUE)
+            if (is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid(), "&round=", game$round_number)), silent = TRUE)
+            if (is_empty_response(response)) {
+              shinyalert("Error", "There was an error querying the game engine")
+            } else if (status_code(response) != 200) {
+              shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+            } else {
+              lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
+            }
+            new_round_available(TRUE)
           }
-          new_round_available(TRUE)
         }
       }
     }
