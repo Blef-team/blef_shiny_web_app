@@ -8,7 +8,7 @@ library(dplyr)
 library(digest)
 
 base_path <- "http://18.132.35.89:8001/v2/"
-names <- read_csv("names.csv", col_types = cols())
+source("nicknames.R")
 actions <- read_csv("action_descriptions.csv", col_types = cols())
 source("routines.R", local = TRUE)
 
@@ -79,14 +79,14 @@ shinyServer(function(input, output, session) {
         )
       } else if (action_initialised() == "create") {
         console <- list(
-          textInput("nickname", HTML("Pick a nickname<br/>(or leave blank and let us generate one):"), width = 300),
+          textInput("nickname", HTML("Pick a nickname<br/>(or leave blank and we'll generate one):"), width = 300),
           actionButton("cancel", "Cancel"),
           actionButton("confirm_create", "Confirm")
         )
       } else if (action_initialised() == "join") {
         console <- list(
           textInput("game_uuid", "Game's UUID:", width = 300, placeholder = "00000000-0000-0000-0000-000000000000"),
-          textInput("nickname", "Pick a nickname:", width = 300),
+          textInput("nickname", HTML("Pick a nickname<br/>(or leave blank and we'll generate one):"), width = 300),
           actionButton("cancel", "Cancel"),
           actionButton("confirm_join", "Confirm")
         )

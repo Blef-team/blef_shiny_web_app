@@ -1,5 +1,6 @@
 generate_name <- function() {
-  paste0(sample(names$adjective, 1), "_", sample(names$animal, 1))
+  letter <- sample(1:26, 1)
+  paste0(sample(nicknames[[letter]]$adjectives, 1), "_", sample(nicknames[[letter]]$animal, 1))
 }
 
 is_empty_response <- function(response) {
