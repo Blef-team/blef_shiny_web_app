@@ -27,8 +27,7 @@ shinyServer(function(input, output, session) {
   games_md5 <- reactiveVal("")
   
   try_enter_game_room <- function(game_uuid_wanted, player_uuid_wanted, nickname_wanted) {
-    if (!is.null(player_uuid_wanted)) response <- try(GET(paste0(base_path, "games/", game_uuid_wanted, "?player_uuid=", player_uuid_wanted)), silent = TRUE)
-    if (is.null(player_uuid_wanted)) response <- try(GET(paste0(base_path, "games/", game_uuid_wanted)), silent = TRUE)
+    response <- try(GET(paste0(base_path, "games/", game_uuid_wanted, "?player_uuid=", player_uuid_wanted)), silent = TRUE)
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
@@ -46,8 +45,7 @@ shinyServer(function(input, output, session) {
   }
   
   try_update_to_current_state <- function(game_uuid, player_uuid, round = -1) {
-    if (!is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid, "?player_uuid=", player_uuid, "&round=", round)), silent = TRUE)
-    if (is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid, "&round=", round)), silent = TRUE)
+    response <- try(GET(paste0(base_path, "games/", game_uuid, "?player_uuid=", player_uuid, "&round=", round)), silent = TRUE)
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
@@ -339,8 +337,7 @@ shinyServer(function(input, output, session) {
   observe({
     invalidateLater(1000)
     if (scene() == "game" & catch_null(game$status) != "Finished" & !catch_null(new_round_available())) {
-      if (!is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid())), silent = TRUE)
-      if (is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid())), silent = TRUE)
+      response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid())), silent = TRUE)
       if (digest(content(response)) != game_md5()) {
         game_md5(digest(content(response)))
         if (is_empty_response(response)) {
@@ -353,8 +350,7 @@ shinyServer(function(input, output, session) {
             lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
           } else {
             # If a game has progressed to another round, update info for the last round seen by user and inform user that new round is available
-            if (!is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid(), "&round=", game$round_number)), silent = TRUE)
-            if (is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid(), "&round=", game$round_number)), silent = TRUE)
+            response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid(), "&round=", game$round_number)), silent = TRUE)
             if (is_empty_response(response)) {
               shinyalert("Error", "There was an error querying the game engine")
             } else if (status_code(response) != 200) {
@@ -371,8 +367,7 @@ shinyServer(function(input, output, session) {
   
   # Manually update the game to the latest state
   observeEvent(input$update_game, {
-    if (!is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid())), silent = TRUE)
-    if (is.null(player_uuid)) response <- try(GET(paste0(base_path, "games/", game_uuid())), silent = TRUE)
+    response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid())), silent = TRUE)
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
