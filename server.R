@@ -112,20 +112,24 @@ shinyServer(function(input, output, session) {
     invalidateLater(1000)
     if (scene() == "lobby") {
       response <- try(GET(paste0(base_path, "games")), silent = TRUE)
-      if (is_empty_response(response)) {
-        shinyalert("Error", "There was an error querying the game engine")
-      } else if (length(content(response)) > 0 & digest(content(response)) != games_md5()) {
-        raw_games <- content(response)
-        games_md5(digest(raw_games))
-        for (i in 1:length(raw_games)) raw_games[[i]]$players <- paste(raw_games[[i]]$players, collapse = ", ")
-        games(
-          raw_games %>%
-            unlist() %>%
-            matrix(nrow = length(raw_games), byrow = T) %>%
-            data.frame(stringsAsFactors = FALSE) %>%
-            set_colnames(c("UUID", "Players", "Started")) %>%
-            mutate(UUID = sapply(UUID, function(x) HTML(paste0("<div style=\"font-family: Consolas\">", x, "</div>"))))
-        )
+      if (digest(content(response)) != games_md5()) {
+        games_md5(digest(content(response)))
+        if (is_empty_response(response)) {
+          shinyalert("Error", "There was an error querying the game engine")
+        } else if (length(content(response)) > 0) {
+          raw_games <- content(response)
+          for (i in 1:length(raw_games)) raw_games[[i]]$players <- paste(raw_games[[i]]$players, collapse = ", ")
+          games(
+            raw_games %>%
+              unlist() %>%
+              matrix(nrow = length(raw_games), byrow = T) %>%
+              data.frame(stringsAsFactors = FALSE) %>%
+              set_colnames(c("UUID", "Players", "Started")) %>%
+              mutate(UUID = sapply(UUID, function(x) HTML(paste0("<div style=\"font-family: Consolas\">", x, "</div>"))))
+          )
+        } else {
+          games(NULL)
+        }
       }
     }
   })
