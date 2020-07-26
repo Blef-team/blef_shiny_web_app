@@ -29,6 +29,7 @@ game_scene <- div(
   uiOutput("history_table"),
   uiOutput("hands"),
   uiOutput("bet_menu"),
+  uiOutput("game_status_message"),
   uiOutput("game_scene")
 )
 
@@ -303,10 +304,17 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  output$game_status_message <- renderUI({
+    if (game$status == "Not started") {
+      list(h5("The game has not started yet."))
+    } else if (game$status == "Finished") {
+      list(h5("The game has finished."))
+    }
+  })
+  
   output$game_scene <- renderUI({
     
     if (game$status == "Not started") {
-
       admin_panel <- if (catch_null(nickname()) == game$admin_nickname) {
         list(
           start_button <- actionButton("start", "Start game"),
@@ -314,16 +322,16 @@ shinyServer(function(input, output, session) {
           privacy_button <- if (game$public) actionButton("make_private", "Make private")
         )
       }
+      return(mainPanel(admin_panel))
       
-      return(
-        mainPanel(
-          h5("The game has not started yet."),
-          admin_panel
-        )
-      )
     } else {
       
-      cp_info <- if (!is.null(game$cp_nickname) & catch_null(game$cp_nickname) != catch_null(nickname())) {
+      cp_info <- if (
+        game$status == "Running" &
+        !is.null(game$cp_nickname) & 
+        catch_null(game$cp_nickname) != catch_null(nickname()) &
+        length(game$hands) <= 1
+      ) {
         h5(paste0("Current player: ", game$cp_nickname))
       }
       
@@ -334,16 +342,10 @@ shinyServer(function(input, output, session) {
         )
       }
       
-      status_message <- if (game$status == "Finished") {
-        h5("The game has finished.")
-      } else if (length(game$hands) == 1 | length(game$hands) == 0) {
-        cp_info
-      }
-      
       return(
         mainPanel(
           update_button,
-          status_message
+          cp_info
         )
       )
     }
