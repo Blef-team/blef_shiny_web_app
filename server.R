@@ -271,7 +271,7 @@ shinyServer(function(input, output, session) {
   output$history_table <- renderUI({
     if (game$status == "Running") {
       list(
-        h5("History:"),
+        h5("Actions so far:"),
         renderTable(format_history(game$history), include.colnames = FALSE)
       )
     }
@@ -322,15 +322,16 @@ shinyServer(function(input, output, session) {
       length(game$hands) <= 1
     ) {
       h5(paste0("Current player: ", game$cp_nickname))
+    } else if (length(game$history) > 2) {
+      if (last(game$history)$action_id == 89) {
+        h5(HTML(paste0("<b>", last(game$history)$player, "</b>", " lost the round.")))
+      }
     }
   })
   
   output$update_button <- renderUI({
     if (game$status == "Running" & new_round_available()) {
-      list(
-        br(),
-        actionButton("update_game", "Go to latest round")
-      )
+      actionButton("update_game", "Go to latest round")
     }
   })
   
