@@ -80,7 +80,8 @@ format_history <- function(history) {
 }
 
 put_variables_in_URL <- function(game_uuid, player_uuid, nickname) {
-  updateQueryString(paste0("?game_uuid=", game_uuid, "&player_uuid=", player_uuid, "&nickname=", nickname))
+  paste0("?game_uuid=", game_uuid, "&player_uuid=", player_uuid, "&nickname=", nickname) %>%
+    updateQueryString(mode = "replace")
 }
 
 # When putting variables in the URL, NULL variables are converted to empty parameters. We have to convert them back to NULL.

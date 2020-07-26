@@ -6,15 +6,30 @@ library(stringr)
 library(httr)
 library(dplyr)
 library(digest)
+library(shiny.router)
 
 base_path <- "http://18.132.35.89:8001/v2/"
 source("nicknames.R")
 actions <- read_csv("action_descriptions.csv", col_types = cols())
 source("routines.R", local = TRUE)
 
+lobby_scene <- div(
+  uiOutput("lobby_scene")
+)
+
+game_scene <- div(
+  uiOutput("game_scene")
+)
+
+router <- make_router(
+  route("/", lobby_scene, NA),
+  route("play", game_scene, NA)
+)
+
 shinyServer(function(input, output, session) {
   
-  scene <- reactiveVal("lobby")
+  router(input, output, session)
+  
   action_initialised <- reactiveVal("none")
   game_uuid <- reactiveVal(NULL)
   player_uuid <- reactiveVal(NULL)
@@ -37,9 +52,9 @@ shinyServer(function(input, output, session) {
       player_uuid(player_uuid_wanted)
       nickname(nickname_wanted)
       put_variables_in_URL(game_uuid(), player_uuid(), nickname())
+      change_page("play")
       lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
       new_round_available(FALSE)
-      scene("game")
       action_initialised("none")
     }
   }
@@ -67,50 +82,47 @@ shinyServer(function(input, output, session) {
   })
   
   output$lobby_scene <- renderUI({
-    if (scene() == "lobby") {
-      if (action_initialised() == "none") {
-        console <- list(
-          actionButton("create", "Create"),
-          actionButton("join", "Join"),
-          if (!is.null(game_uuid())) actionButton("return", "Return to game"),
-          actionButton("observe", "Observe")
-        )
-      } else if (action_initialised() == "create") {
-        console <- list(
-          textInput("nickname", HTML("Pick a nickname<br/>(or leave blank and we'll generate one):"), width = 300),
-          actionButton("cancel", "Cancel"),
-          actionButton("confirm_create", "Confirm")
-        )
-      } else if (action_initialised() == "join") {
-        console <- list(
-          textInput("game_uuid", "Game's UUID:", width = 300, placeholder = "00000000-0000-0000-0000-000000000000"),
-          textInput("nickname", HTML("Pick a nickname<br/>(or leave blank and we'll generate one):"), width = 300),
-          actionButton("cancel", "Cancel"),
-          actionButton("confirm_join", "Confirm")
-        )
-      } else if (action_initialised() == "observe") {
-        console <- list(
-          textInput("game_uuid", "Game's UUID", width = 300, placeholder = "00000000-0000-0000-0000-000000000000"),
-          actionButton("cancel", "Cancel"),
-          actionButton("confirm_observe", "Confirm")
-        )
-      }
-      
-      mainPanel(
-        titlePanel("Blef - game lobby"),
-        console,
-        hr(),
-        h4("Public games:"),
-        renderTable({
-          if (length(games()) > 0) games()
-        }, sanitize.text.function = function(x) str_remove(x, "/"))
+    if (action_initialised() == "none") {
+      console <- list(
+        actionButton("create", "Create"),
+        actionButton("join", "Join"),
+        actionButton("observe", "Observe")
+      )
+    } else if (action_initialised() == "create") {
+      console <- list(
+        textInput("nickname", HTML("Pick a nickname<br/>(or leave blank and we'll generate one):"), width = 300),
+        actionButton("cancel", "Cancel"),
+        actionButton("confirm_create", "Confirm")
+      )
+    } else if (action_initialised() == "join") {
+      console <- list(
+        textInput("game_uuid", "Game's UUID:", width = 300, placeholder = "00000000-0000-0000-0000-000000000000"),
+        textInput("nickname", HTML("Pick a nickname<br/>(or leave blank and we'll generate one):"), width = 300),
+        actionButton("cancel", "Cancel"),
+        actionButton("confirm_join", "Confirm")
+      )
+    } else if (action_initialised() == "observe") {
+      console <- list(
+        textInput("game_uuid", "Game's UUID", width = 300, placeholder = "00000000-0000-0000-0000-000000000000"),
+        actionButton("cancel", "Cancel"),
+        actionButton("confirm_observe", "Confirm")
       )
     }
+    
+    mainPanel(
+      titlePanel("Blef - game lobby"),
+      console,
+      hr(),
+      h4("Public games:"),
+      renderTable({
+        if (length(games()) > 0) games()
+      }, sanitize.text.function = function(x) str_remove(x, "/"))
+    )
   })
   
   observe({
     invalidateLater(1000)
-    if (scene() == "lobby") {
+    if (get_page() == "/") {
       response <- try(GET(paste0(base_path, "games")), silent = TRUE)
       if (digest(content(response)) != games_md5()) {
         games_md5(digest(content(response)))
@@ -189,10 +201,6 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  observeEvent(input$return, {
-    scene("game")
-  })
-  
   observeEvent(input$observe, {
     action_initialised("observe")
   })
@@ -207,140 +215,138 @@ shinyServer(function(input, output, session) {
   })
   
   output$game_scene <- renderUI({
-    if (scene() == "game") {
-      
-      leave_button <- if (game$status == "Finished" | is.null(player_uuid())) list(
-        actionButton("leave", "Leave to lobby"),
-        br(),
-        br()
+    
+    leave_button <- if (game$status == "Finished" | is.null(player_uuid())) list(
+      actionButton("leave", "Leave to lobby"),
+      br(),
+      br()
+    )
+    
+    if (game$status == "Not started") {
+      game_info_table <- data.frame(
+        keys = c("Game UUID", "Admin nickname", "Game public"),
+        values = as.character(c(game_uuid(), game$admin_nickname, ifelse(game$public, "Yes", "No")))
       )
       
-      if (game$status == "Not started") {
-        game_info_table <- data.frame(
-          keys = c("Game UUID", "Admin nickname", "Game public"),
-          values = as.character(c(game_uuid(), game$admin_nickname, ifelse(game$public, "Yes", "No")))
-        )
-        
-        players_table <- format_players(game$players)$Player
-        
-        admin_panel <- if (catch_null(nickname()) == game$admin_nickname) {
-          list(
-            start_button <- actionButton("start", "Start game"),
-            privacy_button <- if (!game$public) actionButton("make_public", "Make public"),
-            privacy_button <- if (game$public) actionButton("make_private", "Make private")
-          )
-        }
-        
-        return(
-          mainPanel(
-            br(),
-            leave_button,
-            renderTable(game_info_table, include.colnames = FALSE),
-            h5("Players:"),
-            renderTable(players_table, include.colnames = FALSE),
-            h5("The game has not started yet."),
-            admin_panel
-          )
-        )
-      } else {
-        
-        general_info <- data.frame(
-          keys = c("Game public", "Maximum allowed cards"),
-          values = as.character(c(ifelse(game$public, "Yes", "No"), game$max_cards))
-        )
-        
-        history_table <- list(
-          h5("History:"),
-          renderTable(format_history(game$history), include.colnames = FALSE)
-        )
-        
-        cp_info <- if (!is.null(game$cp_nickname) & catch_null(game$cp_nickname) != catch_null(nickname())) {
-          h5(paste0("Current player: ", game$cp_nickname))
-        }
-        
-        if (game$status == "Running") {
-          if (length(game$hands) == 1) {
-            # If you only see your own hand, generate both a 'your hand' row and a 'cards per player' object
-            game_info <- list(
-              renderTable(general_info, include.colnames = FALSE, sanitize.text.function = function(x) x), 
-              h5("Cards per player:"),
-              renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x),
-              history_table,
-              h5("Your hand:"), 
-              renderUI(HTML(format_hand(game$hands[[1]]$hand)))
-            )
-          } else if (length(game$hands) > 1) {
-            # If you can show everybody's (more than 1 person's) hands, don't show cards per player
-            game_info <- list(
-              renderTable(general_info, include.colnames = FALSE, sanitize.text.function = function(x) x), 
-              h5("Cards per player:"),
-              renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x),
-              history_table,
-              h5("Hands:"),
-              renderTable(format_all_hands(game$hands), include.colnames = FALSE, sanitize.text.function = function(x) x)
-            )
-          } else if (length(game$hands) == 0) {
-            # If you can't show anybody's hand, there is no hand object to generate
-            game_info <- list(
-              renderTable(general_info, include.colnames = FALSE, sanitize.text.function = function(x) x), 
-              h5("Cards per player:"),
-              renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x),
-              history_table
-            )  
-          }
-        } else if (game$status == "Finished") {
-          game_info <- list(
-            renderTable(general_info, include.colnames = FALSE, sanitize.text.function = function(x) x), 
-            h5("Results:"),
-            renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x),
-            h5("Hands:"),
-            renderTable(format_all_hands(game$hands), include.colnames = FALSE, sanitize.text.function = function(x) x),
-            history_table
-          )
-        }
-        
-        action_menu <- if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
-          last_bet <- if (length(game$history) > 0) last(game$history)$action_id else -1
-          
-          list(
-            h5("Make your move:"),
-            if (last_bet < 87) selectInput("bet_id", NULL, setNames((last_bet + 1):87, actions$description[(last_bet + 2):88])),
-            if (last_bet < 87) actionButton("bet", "Confirm bet"),
-            if (length(game$history) > 0) actionButton("check", "Check")
-          )
-        }
-        
-        update_button <- if(new_round_available()) {
-          list(
-            br(),
-            actionButton("update_game", "Go to latest round")
-          )
-        }
-        
-        status_message <- if (game$status == "Finished") {
-          h5("The game has finished.")
-        } else if (length(game$hands) == 1 | length(game$hands) == 0) {
-          cp_info
-        }
-        
-        return(
-          mainPanel(
-            br(),
-            leave_button,
-            game_info,
-            action_menu,
-            update_button,
-            status_message
-          )
+      players_table <- format_players(game$players)$Player
+      
+      admin_panel <- if (catch_null(nickname()) == game$admin_nickname) {
+        list(
+          start_button <- actionButton("start", "Start game"),
+          privacy_button <- if (!game$public) actionButton("make_public", "Make public"),
+          privacy_button <- if (game$public) actionButton("make_private", "Make private")
         )
       }
+      
+      return(
+        mainPanel(
+          br(),
+          leave_button,
+          renderTable(game_info_table, include.colnames = FALSE),
+          h5("Players:"),
+          renderTable(players_table, include.colnames = FALSE),
+          h5("The game has not started yet."),
+          admin_panel
+        )
+      )
+    } else {
+      
+      general_info <- data.frame(
+        keys = c("Game public", "Maximum allowed cards"),
+        values = as.character(c(ifelse(game$public, "Yes", "No"), game$max_cards))
+      )
+      
+      history_table <- list(
+        h5("History:"),
+        renderTable(format_history(game$history), include.colnames = FALSE)
+      )
+      
+      cp_info <- if (!is.null(game$cp_nickname) & catch_null(game$cp_nickname) != catch_null(nickname())) {
+        h5(paste0("Current player: ", game$cp_nickname))
+      }
+      
+      if (game$status == "Running") {
+        if (length(game$hands) == 1) {
+          # If you only see your own hand, generate both a 'your hand' row and a 'cards per player' object
+          game_info <- list(
+            renderTable(general_info, include.colnames = FALSE, sanitize.text.function = function(x) x), 
+            h5("Cards per player:"),
+            renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x),
+            history_table,
+            h5("Your hand:"), 
+            renderUI(HTML(format_hand(game$hands[[1]]$hand)))
+          )
+        } else if (length(game$hands) > 1) {
+          # If you can show everybody's (more than 1 person's) hands, don't show cards per player
+          game_info <- list(
+            renderTable(general_info, include.colnames = FALSE, sanitize.text.function = function(x) x), 
+            h5("Cards per player:"),
+            renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x),
+            history_table,
+            h5("Hands:"),
+            renderTable(format_all_hands(game$hands), include.colnames = FALSE, sanitize.text.function = function(x) x)
+          )
+        } else if (length(game$hands) == 0) {
+          # If you can't show anybody's hand, there is no hand object to generate
+          game_info <- list(
+            renderTable(general_info, include.colnames = FALSE, sanitize.text.function = function(x) x), 
+            h5("Cards per player:"),
+            renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x),
+            history_table
+          )  
+        }
+      } else if (game$status == "Finished") {
+        game_info <- list(
+          renderTable(general_info, include.colnames = FALSE, sanitize.text.function = function(x) x), 
+          h5("Results:"),
+          renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x),
+          h5("Hands:"),
+          renderTable(format_all_hands(game$hands), include.colnames = FALSE, sanitize.text.function = function(x) x),
+          history_table
+        )
+      }
+      
+      action_menu <- if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
+        last_bet <- if (length(game$history) > 0) last(game$history)$action_id else -1
+        
+        list(
+          h5("Make your move:"),
+          if (last_bet < 87) selectInput("bet_id", NULL, setNames((last_bet + 1):87, actions$description[(last_bet + 2):88])),
+          if (last_bet < 87) actionButton("bet", "Confirm bet"),
+          if (length(game$history) > 0) actionButton("check", "Check")
+        )
+      }
+      
+      update_button <- if(new_round_available()) {
+        list(
+          br(),
+          actionButton("update_game", "Go to latest round")
+        )
+      }
+      
+      status_message <- if (game$status == "Finished") {
+        h5("The game has finished.")
+      } else if (length(game$hands) == 1 | length(game$hands) == 0) {
+        cp_info
+      }
+      
+      return(
+        mainPanel(
+          br(),
+          leave_button,
+          game_info,
+          action_menu,
+          update_button,
+          status_message
+        )
+      )
     }
   })
   
   # Automatically update the state of the round every 500 miliseconds, but don't automatically display new round
   observe({
     invalidateLater(1000)
-    if (scene() == "game" & catch_null(game$status) != "Finished" & !catch_null(new_round_available())) {
+    if (get_page() == "play" & catch_null(game$status) != "Finished" & !catch_null(new_round_available())) {
       response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid())), silent = TRUE)
       if (digest(content(response)) != game_md5()) {
         game_md5(digest(content(response)))
@@ -383,7 +389,7 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$leave, {
-    scene("lobby")
+    change_page("/")
   })
   
   observeEvent(input$start, {
