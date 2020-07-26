@@ -30,6 +30,7 @@ game_scene <- div(
   uiOutput("hands"),
   uiOutput("bet_menu"),
   uiOutput("game_status_message"),
+  uiOutput("round_status_message"),
   uiOutput("game_scene")
 )
 
@@ -306,9 +307,20 @@ shinyServer(function(input, output, session) {
   
   output$game_status_message <- renderUI({
     if (game$status == "Not started") {
-      list(h5("The game has not started yet."))
+      h5("The game has not started yet.")
     } else if (game$status == "Finished") {
-      list(h5("The game has finished."))
+      h5("The game has finished.")
+    }
+  })
+  
+  output$round_status_message <- renderUI({
+    if (
+      game$status == "Running" &
+      !is.null(game$cp_nickname) & 
+      catch_null(game$cp_nickname) != catch_null(nickname()) &
+      length(game$hands) <= 1
+    ) {
+      h5(paste0("Current player: ", game$cp_nickname))
     }
   })
   
@@ -325,16 +337,7 @@ shinyServer(function(input, output, session) {
       return(mainPanel(admin_panel))
       
     } else {
-      
-      cp_info <- if (
-        game$status == "Running" &
-        !is.null(game$cp_nickname) & 
-        catch_null(game$cp_nickname) != catch_null(nickname()) &
-        length(game$hands) <= 1
-      ) {
-        h5(paste0("Current player: ", game$cp_nickname))
-      }
-      
+
       update_button <- if(new_round_available()) {
         list(
           br(),
@@ -342,12 +345,7 @@ shinyServer(function(input, output, session) {
         )
       }
       
-      return(
-        mainPanel(
-          update_button,
-          cp_info
-        )
-      )
+      return(mainPanel(update_button))
     }
   })
   
