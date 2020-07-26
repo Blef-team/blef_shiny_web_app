@@ -24,6 +24,7 @@ lobby_scene <- div(
 game_scene <- div(
   br(),
   uiOutput("leave_button"),
+  uiOutput("game_general_info"),
   uiOutput("game_scene")
 )
 
@@ -226,14 +227,25 @@ shinyServer(function(input, output, session) {
       )
   })
   
-  output$game_scene <- renderUI({
-    
+  output$game_general_info <- renderUI({
     if (game$status == "Not started") {
-      game_info_table <- data.frame(
+      info_table <- data.frame(
         keys = c("Game UUID", "Admin nickname", "Game public"),
         values = as.character(c(game_uuid(), game$admin_nickname, ifelse(game$public, "Yes", "No")))
       )
-      
+    } else {
+      info_table <- data.frame(
+        keys = c("Game public", "Maximum allowed cards"),
+        values = as.character(c(ifelse(game$public, "Yes", "No"), game$max_cards))
+      )
+    }
+    list(renderTable(info_table, include.colnames = FALSE))
+  })
+  
+  output$game_scene <- renderUI({
+    
+    if (game$status == "Not started") {
+
       players_table <- format_players(game$players)$Player
       
       admin_panel <- if (catch_null(nickname()) == game$admin_nickname) {
@@ -246,7 +258,6 @@ shinyServer(function(input, output, session) {
       
       return(
         mainPanel(
-          renderTable(game_info_table, include.colnames = FALSE),
           h5("Players:"),
           renderTable(players_table, include.colnames = FALSE),
           h5("The game has not started yet."),
@@ -254,11 +265,6 @@ shinyServer(function(input, output, session) {
         )
       )
     } else {
-      
-      general_info <- data.frame(
-        keys = c("Game public", "Maximum allowed cards"),
-        values = as.character(c(ifelse(game$public, "Yes", "No"), game$max_cards))
-      )
       
       history_table <- list(
         h5("History:"),
@@ -273,7 +279,6 @@ shinyServer(function(input, output, session) {
         if (length(game$hands) == 1) {
           # If you only see your own hand, generate both a 'your hand' row and a 'cards per player' object
           game_info <- list(
-            renderTable(general_info, include.colnames = FALSE, sanitize.text.function = function(x) x), 
             h5("Cards per player:"),
             renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x),
             history_table,
@@ -283,7 +288,6 @@ shinyServer(function(input, output, session) {
         } else if (length(game$hands) > 1) {
           # If you can show everybody's (more than 1 person's) hands, don't show cards per player
           game_info <- list(
-            renderTable(general_info, include.colnames = FALSE, sanitize.text.function = function(x) x), 
             h5("Cards per player:"),
             renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x),
             history_table,
@@ -293,7 +297,6 @@ shinyServer(function(input, output, session) {
         } else if (length(game$hands) == 0) {
           # If you can't show anybody's hand, there is no hand object to generate
           game_info <- list(
-            renderTable(general_info, include.colnames = FALSE, sanitize.text.function = function(x) x), 
             h5("Cards per player:"),
             renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x),
             history_table
@@ -301,7 +304,6 @@ shinyServer(function(input, output, session) {
         }
       } else if (game$status == "Finished") {
         game_info <- list(
-          renderTable(general_info, include.colnames = FALSE, sanitize.text.function = function(x) x), 
           h5("Results:"),
           renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x),
           h5("Hands:"),
