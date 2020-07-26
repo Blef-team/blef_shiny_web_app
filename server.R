@@ -32,7 +32,7 @@ game_scene <- div(
   uiOutput("game_status_message"),
   uiOutput("round_status_message"),
   uiOutput("update_button"),
-  uiOutput("game_scene")
+  uiOutput("admin_panel")
 )
 
 router <- make_router(
@@ -334,17 +334,13 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  output$game_scene <- renderUI({
-    
-    if (game$status == "Not started") {
-      admin_panel <- if (catch_null(nickname()) == game$admin_nickname) {
-        list(
-          start_button <- actionButton("start", "Start game"),
-          privacy_button <- if (!game$public) actionButton("make_public", "Make public"),
-          privacy_button <- if (game$public) actionButton("make_private", "Make private")
-        )
-      }
-      return(mainPanel(admin_panel))
+  output$admin_panel <- renderUI({
+    if (game$status == "Not started" & catch_null(nickname()) == game$admin_nickname) {
+      list(
+        start_button <- actionButton("start", "Start game"),
+        privacy_button <- if (!game$public) actionButton("make_public", "Make public"),
+        privacy_button <- if (game$public) actionButton("make_private", "Make private")
+      )
     }
   })
   
