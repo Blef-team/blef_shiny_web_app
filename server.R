@@ -14,7 +14,11 @@ actions <- read_csv("action_descriptions.csv", col_types = cols())
 source("routines.R", local = TRUE)
 
 lobby_scene <- div(
-  uiOutput("lobby_scene")
+  titlePanel("Blef - game lobby"),
+  uiOutput("lobby_control_panel"),
+  hr(),
+  h4("Public games:"),
+  uiOutput("games_table")
 )
 
 game_scene <- div(
@@ -81,44 +85,41 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  output$lobby_scene <- renderUI({
+  output$lobby_control_panel <- renderUI({
     if (action_initialised() == "none") {
-      console <- list(
+      output <- list(
         actionButton("create", "Create"),
         actionButton("join", "Join"),
         actionButton("observe", "Observe")
       )
     } else if (action_initialised() == "create") {
-      console <- list(
+      output <- list(
         textInput("nickname", HTML("Pick a nickname<br/>(or leave blank and we'll generate one):"), width = 300),
         actionButton("cancel", "Cancel"),
         actionButton("confirm_create", "Confirm")
       )
     } else if (action_initialised() == "join") {
-      console <- list(
+      output <- list(
         textInput("game_uuid", "Game's UUID:", width = 300, placeholder = "00000000-0000-0000-0000-000000000000"),
         textInput("nickname", HTML("Pick a nickname<br/>(or leave blank and we'll generate one):"), width = 300),
         actionButton("cancel", "Cancel"),
         actionButton("confirm_join", "Confirm")
       )
     } else if (action_initialised() == "observe") {
-      console <- list(
+      output <- list(
         textInput("game_uuid", "Game's UUID", width = 300, placeholder = "00000000-0000-0000-0000-000000000000"),
         actionButton("cancel", "Cancel"),
         actionButton("confirm_observe", "Confirm")
       )
     }
     
-    mainPanel(
-      titlePanel("Blef - game lobby"),
-      console,
-      hr(),
-      h4("Public games:"),
-      renderTable({
-        if (length(games()) > 0) games()
-      }, sanitize.text.function = function(x) str_remove(x, "/"))
-    )
+    return(output)
   })
+  
+  output$games_table <- renderTable(
+    {if (length(games()) > 0) games()}, 
+    sanitize.text.function = function(x) str_remove(x, "/")
+  )
   
   observe({
     invalidateLater(1000)
