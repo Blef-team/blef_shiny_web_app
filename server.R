@@ -22,6 +22,8 @@ lobby_scene <- div(
 )
 
 game_scene <- div(
+  br(),
+  uiOutput("leave_button"),
   uiOutput("game_scene")
 )
 
@@ -215,13 +217,16 @@ shinyServer(function(input, output, session) {
     action_initialised("none")
   })
   
+  output$leave_button <- renderUI({
+    if (game$status == "Finished" | is.null(player_uuid())) 
+      list(
+        actionButton("leave", "Leave to lobby"),
+        br(),
+        br()
+      )
+  })
+  
   output$game_scene <- renderUI({
-    
-    leave_button <- if (game$status == "Finished" | is.null(player_uuid())) list(
-      actionButton("leave", "Leave to lobby"),
-      br(),
-      br()
-    )
     
     if (game$status == "Not started") {
       game_info_table <- data.frame(
@@ -241,8 +246,6 @@ shinyServer(function(input, output, session) {
       
       return(
         mainPanel(
-          br(),
-          leave_button,
           renderTable(game_info_table, include.colnames = FALSE),
           h5("Players:"),
           renderTable(players_table, include.colnames = FALSE),
@@ -333,8 +336,6 @@ shinyServer(function(input, output, session) {
       
       return(
         mainPanel(
-          br(),
-          leave_button,
           game_info,
           action_menu,
           update_button,
