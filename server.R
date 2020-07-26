@@ -31,6 +31,7 @@ game_scene <- div(
   uiOutput("bet_menu"),
   uiOutput("game_status_message"),
   uiOutput("round_status_message"),
+  uiOutput("update_button"),
   uiOutput("game_scene")
 )
 
@@ -324,6 +325,15 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  output$update_button <- renderUI({
+    if (game$status == "Running" & new_round_available()) {
+      list(
+        br(),
+        actionButton("update_game", "Go to latest round")
+      )
+    }
+  })
+  
   output$game_scene <- renderUI({
     
     if (game$status == "Not started") {
@@ -335,17 +345,6 @@ shinyServer(function(input, output, session) {
         )
       }
       return(mainPanel(admin_panel))
-      
-    } else {
-
-      update_button <- if(new_round_available()) {
-        list(
-          br(),
-          actionButton("update_game", "Go to latest round")
-        )
-      }
-      
-      return(mainPanel(update_button))
     }
   })
   
