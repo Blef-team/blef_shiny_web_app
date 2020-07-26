@@ -28,6 +28,7 @@ game_scene <- div(
   uiOutput("players_table"),
   uiOutput("history_table"),
   uiOutput("hands"),
+  uiOutput("bet_menu"),
   uiOutput("game_scene")
 )
 
@@ -289,6 +290,19 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  output$bet_menu <- renderUI({
+    if (game$status == "Running" & !is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
+      last_bet <- if (length(game$history) > 0) last(game$history)$action_id else -1
+      
+      list(
+        h5("Make your move:"),
+        if (last_bet < 87) selectInput("bet_id", NULL, setNames((last_bet + 1):87, actions$description[(last_bet + 2):88])),
+        if (last_bet < 87) actionButton("bet", "Confirm bet"),
+        if (length(game$history) > 0) actionButton("check", "Check")
+      )
+    }
+  })
+  
   output$game_scene <- renderUI({
     
     if (game$status == "Not started") {
@@ -313,17 +327,6 @@ shinyServer(function(input, output, session) {
         h5(paste0("Current player: ", game$cp_nickname))
       }
       
-      action_menu <- if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
-        last_bet <- if (length(game$history) > 0) last(game$history)$action_id else -1
-        
-        list(
-          h5("Make your move:"),
-          if (last_bet < 87) selectInput("bet_id", NULL, setNames((last_bet + 1):87, actions$description[(last_bet + 2):88])),
-          if (last_bet < 87) actionButton("bet", "Confirm bet"),
-          if (length(game$history) > 0) actionButton("check", "Check")
-        )
-      }
-      
       update_button <- if(new_round_available()) {
         list(
           br(),
@@ -339,7 +342,6 @@ shinyServer(function(input, output, session) {
       
       return(
         mainPanel(
-          action_menu,
           update_button,
           status_message
         )
