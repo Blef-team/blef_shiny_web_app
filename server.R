@@ -27,6 +27,7 @@ game_scene <- div(
   uiOutput("game_general_info"),
   uiOutput("players_table"),
   uiOutput("history_table"),
+  uiOutput("hands"),
   uiOutput("game_scene")
 )
 
@@ -272,6 +273,22 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  output$hands <- renderUI({
+    if (game$status == "Running") {
+      if (length(game$hands) == 1) {
+        list(
+          h5("Your hand:"), 
+          renderUI(HTML(format_hand(game$hands[[1]]$hand)))
+        )
+      } else if (length(game$hands) > 1) {
+        list(
+          h5("Hands:"),
+          renderTable(format_all_hands(game$hands), include.colnames = FALSE, sanitize.text.function = function(x) x)
+        )
+      }
+    }
+  })
+  
   output$game_scene <- renderUI({
     
     if (game$status == "Not started") {
@@ -294,27 +311,6 @@ shinyServer(function(input, output, session) {
       
       cp_info <- if (!is.null(game$cp_nickname) & catch_null(game$cp_nickname) != catch_null(nickname())) {
         h5(paste0("Current player: ", game$cp_nickname))
-      }
-      
-      if (game$status == "Running") {
-        if (length(game$hands) == 1) {
-          # If you only see your own hand, generate both a 'your hand' row and a 'cards per player' object
-          game_info <- list(
-            h5("Your hand:"), 
-            renderUI(HTML(format_hand(game$hands[[1]]$hand)))
-          )
-        } else if (length(game$hands) > 1) {
-          # If you can show everybody's (more than 1 person's) hands, don't show cards per player
-          game_info <- list(
-            h5("Hands:"),
-            renderTable(format_all_hands(game$hands), include.colnames = FALSE, sanitize.text.function = function(x) x)
-          )
-        } else if (length(game$hands) == 0) {
-          # If you can't show anybody's hand, there is no hand object to generate
-          game_info <- list()  
-        }
-      } else if (game$status == "Finished") {
-        game_info <- list()
       }
       
       action_menu <- if (!is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
@@ -343,7 +339,6 @@ shinyServer(function(input, output, session) {
       
       return(
         mainPanel(
-          game_info,
           action_menu,
           update_button,
           status_message
