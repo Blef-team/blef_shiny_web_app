@@ -16,14 +16,15 @@ source("routines.R", local = TRUE)
 lobby_scene <- div(
   titlePanel("Blef - game lobby"),
   uiOutput("lobby_control_panel"),
+  checkboxInput("style", "Dark theme"),
   hr(),
   h4("Public games:"),
   uiOutput("games_table")
 )
 
 game_scene <- div(
-  br(),
   uiOutput("leave_button"),
+  checkboxInput("style", "Dark theme"),
   uiOutput("game_general_info"),
   uiOutput("players_table"),
   uiOutput("history_table"),
@@ -225,12 +226,21 @@ shinyServer(function(input, output, session) {
     action_initialised("none")
   })
   
+  output$style <- renderUI({
+    if (!is.null(input$style)) {
+      if (input$style) {
+        includeCSS("www/darkly.css")
+      } else {
+        includeCSS("www/flatly.css")
+      }
+    }
+  })
+  
   output$leave_button <- renderUI({
     if (game$status == "Finished" | is.null(player_uuid())) 
       list(
-        actionButton("leave", "Leave to lobby"),
         br(),
-        br()
+        actionButton("leave", "Leave to lobby")
       )
   })
   
