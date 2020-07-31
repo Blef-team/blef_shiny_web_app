@@ -67,6 +67,7 @@ shinyServer(function(input, output, session) {
       game_uuid(game_uuid_wanted)
       player_uuid(player_uuid_wanted)
       nickname(nickname_wanted)
+      current_theme(input$style)
       put_variables_in_URL(game_uuid(), player_uuid(), nickname())
       change_page("play")
       lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
@@ -233,7 +234,6 @@ shinyServer(function(input, output, session) {
   
   output$style <- renderUI({
     if (!is.null(input$style)) {
-      current_theme(input$style)
       if (input$style) {
         includeCSS("www/darkly.css")
       } else {
@@ -407,6 +407,7 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$leave, {
+    current_theme(input$style)
     change_page("/")
   })
   
