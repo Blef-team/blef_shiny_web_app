@@ -52,8 +52,7 @@ shinyServer(function(input, output, session) {
   data_recovered <- reactiveVal(FALSE)
   game_md5 <- reactiveVal("")
   games_md5 <- reactiveVal("")
-  current_theme <- reactiveVal(FALSE)
-  
+
   game_uuid <- reactive({
     if (is.null(get_query_param()$game_uuid)) {
       return(NULL)
@@ -78,6 +77,14 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  dark_mode <- reactive({
+    if (is.null(get_query_param()$dark_mode)) {
+      return(FALSE)
+    } else {
+      as.logical(get_query_param()$dark_mode)
+    }
+  })
+  
   try_enter_game_room <- function(game_uuid_wanted, player_uuid_wanted, nickname_wanted) {
     response <- try(GET(paste0(base_path, "games/", game_uuid_wanted, "?player_uuid=", player_uuid_wanted)), silent = TRUE)
     if (is_empty_response(response)) {
@@ -85,8 +92,7 @@ shinyServer(function(input, output, session) {
     } else if (status_code(response) != 200) {
       shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     } else {
-      current_theme(input$style)
-      put_variables_in_URL(game_uuid_wanted, player_uuid_wanted, nickname_wanted)
+      put_variables_in_URL(game_uuid_wanted, player_uuid_wanted, nickname_wanted, input$dark_mode)
       change_page("play")
       lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
       new_round_available(FALSE)
@@ -247,12 +253,12 @@ shinyServer(function(input, output, session) {
   })
   
   output$style_checkbox <- renderUI({
-    checkboxInput("style", "Dark theme", value = current_theme())
+    checkboxInput("dark_mode", "Dark theme", value = dark_mode())
   })
   
   output$style <- renderUI({
-    if (!is.null(input$style)) {
-      if (input$style) {
+    if (!is.null(input$dark_mode)) {
+      if (input$dark_mode) {
         includeCSS("www/darkly.css")
       } else {
         includeCSS("www/flatly.css")
@@ -425,7 +431,7 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$leave, {
-    current_theme(input$style)
+    put_variables_in_URL("", "", "", input$dark_mode)
     change_page("/")
   })
   

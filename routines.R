@@ -80,8 +80,8 @@ format_history <- function(history) {
   }
 }
 
-put_variables_in_URL <- function(game_uuid, player_uuid, nickname) {
-  paste0("?game_uuid=", game_uuid, "&player_uuid=", player_uuid, "&nickname=", nickname) %>%
+put_variables_in_URL <- function(game_uuid, player_uuid, nickname, dark_mode) {
+  paste0("?game_uuid=", game_uuid, "&player_uuid=", player_uuid, "&nickname=", nickname, "&dark_mode=", dark_mode) %>%
     updateQueryString(mode = "replace")
 }
 
