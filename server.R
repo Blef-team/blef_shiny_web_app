@@ -46,9 +46,6 @@ shinyServer(function(input, output, session) {
   router(input, output, session)
   
   action_initialised <- reactiveVal("none")
-  game_uuid <- reactiveVal(NULL)
-  player_uuid <- reactiveVal(NULL)
-  nickname <- reactiveVal(NULL)
   game <- reactiveValues()
   games <- reactiveVal()
   new_round_available <- reactiveVal(FALSE)
@@ -57,6 +54,30 @@ shinyServer(function(input, output, session) {
   games_md5 <- reactiveVal("")
   current_theme <- reactiveVal(FALSE)
   
+  game_uuid <- reactive({
+    if (is.null(get_query_param()$game_uuid)) {
+      return(NULL)
+    } else {
+      get_query_param()$game_uuid
+    }
+  })
+  
+  player_uuid <- reactive({
+    if (is.null(get_query_param()$player_uuid)) {
+      return(NULL)
+    } else {
+      get_query_param()$player_uuid
+    }
+  })
+  
+  nickname <- reactive({
+    if (is.null(get_query_param()$nickname)) {
+      return(NULL)
+    } else {
+      get_query_param()$nickname
+    }
+  })
+  
   try_enter_game_room <- function(game_uuid_wanted, player_uuid_wanted, nickname_wanted) {
     response <- try(GET(paste0(base_path, "games/", game_uuid_wanted, "?player_uuid=", player_uuid_wanted)), silent = TRUE)
     if (is_empty_response(response)) {
@@ -64,11 +85,8 @@ shinyServer(function(input, output, session) {
     } else if (status_code(response) != 200) {
       shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     } else {
-      game_uuid(game_uuid_wanted)
-      player_uuid(player_uuid_wanted)
-      nickname(nickname_wanted)
       current_theme(input$style)
-      put_variables_in_URL(game_uuid(), player_uuid(), nickname())
+      put_variables_in_URL(game_uuid_wanted, player_uuid_wanted, nickname_wanted)
       change_page("play")
       lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
       new_round_available(FALSE)
@@ -243,7 +261,7 @@ shinyServer(function(input, output, session) {
   })
   
   output$leave_button <- renderUI({
-    if (game$status == "Finished" | is.null(player_uuid())) 
+    if (game$status == "Finished" | player_uuid() == "")
       list(
         br(),
         actionButton("leave", "Leave to lobby")
@@ -310,7 +328,7 @@ shinyServer(function(input, output, session) {
   })
   
   output$bet_menu <- renderUI({
-    if (game$status == "Running" & !is.null(nickname()) & catch_null(nickname()) == catch_null(game$cp_nickname)) {
+    if (game$status == "Running" & nickname() != "" & nickname() == catch_null(game$cp_nickname)) {
       last_bet <- if (length(game$history) > 0) last(game$history)$action_id else -1
       
       list(
