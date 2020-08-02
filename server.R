@@ -49,7 +49,6 @@ shinyServer(function(input, output, session) {
   game <- reactiveValues()
   games <- reactiveVal()
   new_round_available <- reactiveVal(FALSE)
-  data_recovered <- reactiveVal(FALSE)
   game_md5 <- reactiveVal("")
   games_md5 <- reactiveVal("")
 
@@ -110,17 +109,6 @@ shinyServer(function(input, output, session) {
       lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
     }
   }
-  
-  observe({
-    if (!data_recovered()) {
-      if (session$clientData$url_search != "") {
-        query <- parseQueryString(session$clientData$url_search) %>%
-          map_empty_strings_to_null()
-        try_enter_game_room(query$game_uuid, query$player_uuid, query$nickname)
-        data_recovered(TRUE)
-      }
-    }
-  })
   
   output$lobby_control_panel <- renderUI({
     if (action_initialised() == "none") {
