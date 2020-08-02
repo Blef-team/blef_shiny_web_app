@@ -16,14 +16,15 @@ source("routines.R", local = TRUE)
 lobby_scene <- div(
   titlePanel("Blef - game lobby"),
   uiOutput("lobby_control_panel"),
+  uiOutput("style_checkbox"),
   hr(),
   h4("Public games:"),
   uiOutput("games_table")
 )
 
 game_scene <- div(
-  br(),
   uiOutput("leave_button"),
+  uiOutput("style_checkbox"),
   uiOutput("game_general_info"),
   uiOutput("players_table"),
   uiOutput("history_table"),
@@ -54,6 +55,7 @@ shinyServer(function(input, output, session) {
   data_recovered <- reactiveVal(FALSE)
   game_md5 <- reactiveVal("")
   games_md5 <- reactiveVal("")
+  current_theme <- reactiveVal(FALSE)
   
   try_enter_game_room <- function(game_uuid_wanted, player_uuid_wanted, nickname_wanted) {
     response <- try(GET(paste0(base_path, "games/", game_uuid_wanted, "?player_uuid=", player_uuid_wanted)), silent = TRUE)
@@ -65,6 +67,7 @@ shinyServer(function(input, output, session) {
       game_uuid(game_uuid_wanted)
       player_uuid(player_uuid_wanted)
       nickname(nickname_wanted)
+      current_theme(input$style)
       put_variables_in_URL(game_uuid(), player_uuid(), nickname())
       change_page("play")
       lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
@@ -225,12 +228,25 @@ shinyServer(function(input, output, session) {
     action_initialised("none")
   })
   
+  output$style_checkbox <- renderUI({
+    checkboxInput("style", "Dark theme", value = current_theme())
+  })
+  
+  output$style <- renderUI({
+    if (!is.null(input$style)) {
+      if (input$style) {
+        includeCSS("www/darkly.css")
+      } else {
+        includeCSS("www/flatly.css")
+      }
+    }
+  })
+  
   output$leave_button <- renderUI({
     if (game$status == "Finished" | is.null(player_uuid())) 
       list(
-        actionButton("leave", "Leave to lobby"),
         br(),
-        br()
+        actionButton("leave", "Leave to lobby")
       )
   })
   
@@ -391,6 +407,7 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$leave, {
+    current_theme(input$style)
     change_page("/")
   })
   
