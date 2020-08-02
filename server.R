@@ -36,45 +36,10 @@ game_scene <- div(
   uiOutput("admin_panel")
 )
 
-router <- make_router(
-  route("/", lobby_scene, NA),
-  route("play", game_scene, NA)
-)
-
-shinyServer(function(input, output, session) {
-  
-  router(input, output, session)
-  
+lobby_server <- function(input, output, session) {
   action_initialised <- reactiveVal("none")
-  game <- reactiveValues()
   games <- reactiveVal()
-  new_round_available <- reactiveVal(FALSE)
-  game_md5 <- reactiveVal("")
   games_md5 <- reactiveVal("")
-
-  game_uuid <- reactive({
-    if (is.null(get_query_param()$game_uuid)) {
-      return(NULL)
-    } else {
-      get_query_param()$game_uuid
-    }
-  })
-  
-  player_uuid <- reactive({
-    if (is.null(get_query_param()$player_uuid)) {
-      return(NULL)
-    } else {
-      get_query_param()$player_uuid
-    }
-  })
-  
-  nickname <- reactive({
-    if (is.null(get_query_param()$nickname)) {
-      return(NULL)
-    } else {
-      get_query_param()$nickname
-    }
-  })
   
   dark_mode <- reactive({
     if (is.null(get_query_param()$dark_mode)) {
@@ -93,20 +58,6 @@ shinyServer(function(input, output, session) {
     } else {
       put_variables_in_URL(game_uuid_wanted, player_uuid_wanted, nickname_wanted, input$dark_mode)
       change_page("play")
-      lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
-      new_round_available(FALSE)
-      action_initialised("none")
-    }
-  }
-  
-  try_update_to_current_state <- function(game_uuid, player_uuid, round = -1) {
-    response <- try(GET(paste0(base_path, "games/", game_uuid, "?player_uuid=", player_uuid, "&round=", round)), silent = TRUE)
-    if (is_empty_response(response)) {
-      shinyalert("Error", "There was an error querying the game engine")
-    } else if (status_code(response) != 200) {
-      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
-    } else {
-      lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
     }
   }
   
@@ -239,6 +190,72 @@ shinyServer(function(input, output, session) {
   observeEvent(input$cancel, {
     action_initialised("none")
   })
+  
+  output$style_checkbox <- renderUI({
+    checkboxInput("dark_mode", "Dark theme", value = dark_mode())
+  })
+  
+  output$style <- renderUI({
+    if (!is.null(input$dark_mode)) {
+      if (input$dark_mode) {
+        includeCSS("www/darkly.css")
+      } else {
+        includeCSS("www/flatly.css")
+      }
+    }
+  })
+}
+
+game_server <- function(input, output, session) {
+  game <- reactiveValues()
+  new_round_available <- reactiveVal(FALSE)
+  game_md5 <- reactiveVal("")
+  
+  game_uuid <- reactive({
+    if (is.null(get_query_param()$game_uuid)) {
+      return(NULL)
+    } else {
+      get_query_param()$game_uuid
+    }
+  })
+  
+  player_uuid <- reactive({
+    if (is.null(get_query_param()$player_uuid)) {
+      return(NULL)
+    } else {
+      get_query_param()$player_uuid
+    }
+  })
+  
+  nickname <- reactive({
+    if (is.null(get_query_param()$nickname)) {
+      return(NULL)
+    } else {
+      get_query_param()$nickname
+    }
+  })
+  
+  dark_mode <- reactive({
+    if (is.null(get_query_param()$dark_mode)) {
+      return(FALSE)
+    } else {
+      as.logical(get_query_param()$dark_mode)
+    }
+  })
+  
+  response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid())), silent = TRUE)
+  lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
+  
+  try_update_to_current_state <- function(game_uuid, player_uuid, round = -1) {
+    response <- try(GET(paste0(base_path, "games/", game_uuid, "?player_uuid=", player_uuid, "&round=", round)), silent = TRUE)
+    if (is_empty_response(response)) {
+      shinyalert("Error", "There was an error querying the game engine")
+    } else if (status_code(response) != 200) {
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+    } else {
+      lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
+    }
+  }
   
   output$style_checkbox <- renderUI({
     checkboxInput("dark_mode", "Dark theme", value = dark_mode())
@@ -472,4 +489,13 @@ shinyServer(function(input, output, session) {
     }
     try_update_to_current_state(game_uuid(), player_uuid(), game$round_number)
   })
+}
+
+router <- make_router(
+  route("/", lobby_scene, lobby_server),
+  route("play", game_scene, game_server)
+)
+
+shinyServer(function(input, output, session) {
+  router(input, output, session)
 })
