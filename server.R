@@ -99,26 +99,24 @@ lobby_server <- function(input, output, session) {
   
   observe({
     invalidateLater(1000)
-    if (get_page() == "/") {
-      response <- try(GET(paste0(base_path, "games")), silent = TRUE)
-      if (digest(content(response)) != games_md5()) {
-        games_md5(digest(content(response)))
-        if (is_empty_response(response)) {
-          shinyalert("Error", "There was an error querying the game engine")
-        } else if (length(content(response)) > 0) {
-          raw_games <- content(response)
-          for (i in 1:length(raw_games)) raw_games[[i]]$players <- paste(raw_games[[i]]$players, collapse = ", ")
-          games(
-            raw_games %>%
-              unlist() %>%
-              matrix(nrow = length(raw_games), byrow = T) %>%
-              data.frame(stringsAsFactors = FALSE) %>%
-              set_colnames(c("UUID", "Players", "Started")) %>%
-              mutate(UUID = sapply(UUID, function(x) HTML(paste0("<div style=\"font-family: Consolas\">", x, "</div>"))))
-          )
-        } else {
-          games(NULL)
-        }
+    response <- try(GET(paste0(base_path, "games")), silent = TRUE)
+    if (digest(content(response)) != games_md5()) {
+      games_md5(digest(content(response)))
+      if (is_empty_response(response)) {
+        shinyalert("Error", "There was an error querying the game engine")
+      } else if (length(content(response)) > 0) {
+        raw_games <- content(response)
+        for (i in 1:length(raw_games)) raw_games[[i]]$players <- paste(raw_games[[i]]$players, collapse = ", ")
+        games(
+          raw_games %>%
+            unlist() %>%
+            matrix(nrow = length(raw_games), byrow = T) %>%
+            data.frame(stringsAsFactors = FALSE) %>%
+            set_colnames(c("UUID", "Players", "Started")) %>%
+            mutate(UUID = sapply(UUID, function(x) HTML(paste0("<div style=\"font-family: Consolas\">", x, "</div>"))))
+        )
+      } else {
+        games(NULL)
       }
     }
   })
@@ -393,7 +391,7 @@ game_server <- function(input, output, session) {
   # Automatically update the state of the round every 500 miliseconds, but don't automatically display new round
   observe({
     invalidateLater(1000)
-    if (get_page() == "play" & catch_null(game$status) != "Finished" & !catch_null(new_round_available())) {
+    if (catch_null(game$status) != "Finished" & !catch_null(new_round_available())) {
       response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid())), silent = TRUE)
       if (digest(content(response)) != game_md5()) {
         game_md5(digest(content(response)))
