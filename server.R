@@ -13,7 +13,10 @@ source("nicknames.R")
 actions <- read_csv("action_descriptions.csv", col_types = cols())
 source("routines.R", local = TRUE)
 
+redirect_js <- "Shiny.addCustomMessageHandler('redirecter', function(message) { window.location = message;});"
+
 lobby_scene <- div(
+  tags$head(tags$script(redirect_js)),
   uiOutput("style"),
   titlePanel("Blef - game lobby"),
   uiOutput("lobby_control_panel"),
@@ -24,6 +27,7 @@ lobby_scene <- div(
 )
 
 game_scene <- div(
+  tags$head(tags$script(redirect_js)),
   uiOutput("style"),
   uiOutput("leave_button"),
   uiOutput("style_checkbox"),
@@ -60,8 +64,8 @@ lobby_server <- function(input, output, session) {
     } else if (status_code(response) != 200) {
       shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     } else {
-      put_variables_in_URL(game_uuid_wanted, player_uuid_wanted, nickname_wanted, input$dark_mode)
-      change_page("play")
+      url <- make_URL_for_game(game_uuid_wanted, player_uuid_wanted, nickname_wanted, input$dark_mode)
+      session$sendCustomMessage("redirecter", url)
     }
   }
   
@@ -438,8 +442,8 @@ game_server <- function(input, output, session) {
   })
   
   observeEvent(input$leave, {
-    put_variables_in_URL("", "", "", input$dark_mode)
-    change_page("/")
+    url <- make_URL_for_lobby("", "", "", input$dark_mode)
+    session$sendCustomMessage("redirecter", url)
   })
   
   observeEvent(input$start, {
