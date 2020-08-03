@@ -13,11 +13,7 @@ source("nicknames.R")
 actions <- read_csv("action_descriptions.csv", col_types = cols())
 source("routines.R", local = TRUE)
 
-redirect_js <- "Shiny.addCustomMessageHandler('redirecter', function(message) { window.location = message;});"
-
 lobby_scene <- div(
-  tags$head(tags$script(redirect_js)),
-  uiOutput("style"),
   titlePanel("Blef - game lobby"),
   uiOutput("lobby_control_panel"),
   uiOutput("style_checkbox"),
@@ -27,8 +23,6 @@ lobby_scene <- div(
 )
 
 game_scene <- div(
-  tags$head(tags$script(redirect_js)),
-  uiOutput("style"),
   uiOutput("leave_button"),
   uiOutput("style_checkbox"),
   uiOutput("game_general_info"),
@@ -54,6 +48,20 @@ lobby_server <- function(input, output, session) {
       return(FALSE)
     } else {
       as.logical(get_query_param()$dark_mode)
+    }
+  })
+  
+  output$style_checkbox <- renderUI({
+    checkboxInput("dark_mode", "Dark theme", value = dark_mode())
+  })
+  
+  output$style <- renderUI({
+    if (!is.null(input$dark_mode)) {
+      if (input$dark_mode) {
+        includeCSS("www/darkly.css")
+      } else {
+        includeCSS("www/flatly.css")
+      }
     }
   })
   
@@ -196,20 +204,6 @@ lobby_server <- function(input, output, session) {
   observeEvent(input$cancel, {
     action_initialised("none")
   })
-  
-  output$style_checkbox <- renderUI({
-    checkboxInput("dark_mode", "Dark theme", value = dark_mode())
-  })
-  
-  output$style <- renderUI({
-    if (!is.null(input$dark_mode)) {
-      if (input$dark_mode) {
-        includeCSS("www/darkly.css")
-      } else {
-        includeCSS("www/flatly.css")
-      }
-    }
-  })
 }
 
 game_server <- function(input, output, session) {
@@ -249,20 +243,6 @@ game_server <- function(input, output, session) {
     }
   })
   
-  response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid())), silent = TRUE)
-  lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
-  
-  try_update_to_current_state <- function(game_uuid, player_uuid, round = -1) {
-    response <- try(GET(paste0(base_path, "games/", game_uuid, "?player_uuid=", player_uuid, "&round=", round)), silent = TRUE)
-    if (is_empty_response(response)) {
-      shinyalert("Error", "There was an error querying the game engine")
-    } else if (status_code(response) != 200) {
-      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
-    } else {
-      lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
-    }
-  }
-  
   output$style_checkbox <- renderUI({
     checkboxInput("dark_mode", "Dark theme", value = dark_mode())
   })
@@ -276,6 +256,20 @@ game_server <- function(input, output, session) {
       }
     }
   })
+  
+  response <- try(GET(paste0(base_path, "games/", game_uuid(), "?player_uuid=", player_uuid())), silent = TRUE)
+  lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
+  
+  try_update_to_current_state <- function(game_uuid, player_uuid, round = -1) {
+    response <- try(GET(paste0(base_path, "games/", game_uuid, "?player_uuid=", player_uuid, "&round=", round)), silent = TRUE)
+    if (is_empty_response(response)) {
+      shinyalert("Error", "There was an error querying the game engine")
+    } else if (status_code(response) != 200) {
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+    } else {
+      lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
+    }
+  }
   
   output$leave_button <- renderUI({
     if (game$status == "Finished" | player_uuid() == "")
