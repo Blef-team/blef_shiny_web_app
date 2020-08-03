@@ -14,6 +14,7 @@ actions <- read_csv("action_descriptions.csv", col_types = cols())
 source("routines.R", local = TRUE)
 
 lobby_scene <- div(
+  uiOutput("style"),
   titlePanel("Blef - game lobby"),
   uiOutput("lobby_control_panel"),
   uiOutput("style_checkbox"),
@@ -23,6 +24,7 @@ lobby_scene <- div(
 )
 
 game_scene <- div(
+  uiOutput("style"),
   uiOutput("leave_button"),
   uiOutput("style_checkbox"),
   uiOutput("game_general_info"),
@@ -35,6 +37,8 @@ game_scene <- div(
   uiOutput("update_button"),
   uiOutput("admin_panel")
 )
+
+redirect_scene <- div()
 
 lobby_server <- function(input, output, session) {
   action_initialised <- reactiveVal("none")
@@ -489,9 +493,14 @@ game_server <- function(input, output, session) {
   })
 }
 
+redirect_server <- function(input, output, session) {
+  change_page("lobby")
+}
+
 router <- make_router(
-  route("/", lobby_scene, lobby_server),
-  route("play", game_scene, game_server)
+  route("lobby", lobby_scene, lobby_server),
+  route("play", game_scene, game_server),
+  default = route("/", redirect_scene, redirect_server)
 )
 
 shinyServer(function(input, output, session) {
