@@ -1,0 +1,11 @@
+if(!require(shiny)) install.packages("shiny", repos = "http://cran.us.r-project.org")
+if(!require(shinyalert)) install.packages("shinyalert", repos = "http://cran.us.r-project.org")
+if(!require(magrittr)) install.packages("magrittr", repos = "http://cran.us.r-project.org")
+if(!require(readr)) install.packages("readr", repos = "http://cran.us.r-project.org")
+if(!require(stringr)) install.packages("stringr", repos = "http://cran.us.r-project.org")
+if(!require(httr)) install.packages("httr", repos = "http://cran.us.r-project.org")
+if(!require(dplyr)) install.packages("dplyr", repos = "http://cran.us.r-project.org")
+if(!require(digest)) install.packages("digest", repos = "http://cran.us.r-project.org")
+if(!require(shiny.router)) install.packages("shiny.router", repos = "http://cran.us.r-project.org")
+
+shiny::runApp(host = "0.0.0.0", port = 4306)
