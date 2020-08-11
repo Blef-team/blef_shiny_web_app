@@ -80,9 +80,12 @@ format_history <- function(history) {
   }
 }
 
-put_variables_in_URL <- function(game_uuid, player_uuid, nickname) {
-  paste0("?game_uuid=", game_uuid, "&player_uuid=", player_uuid, "&nickname=", nickname) %>%
-    updateQueryString(mode = "replace")
+make_URL_for_lobby <- function(game_uuid, player_uuid, nickname, dark_mode) {
+  paste0("?game_uuid=", game_uuid, "&player_uuid=", player_uuid, "&nickname=", nickname, "&dark_mode=", dark_mode, "#!/lobby")
+}
+
+make_URL_for_game <- function(game_uuid, player_uuid, nickname, dark_mode) {
+  paste0("?game_uuid=", game_uuid, "&player_uuid=", player_uuid, "&nickname=", nickname, "&dark_mode=", dark_mode, "#!/play")
 }
 
 # When putting variables in the URL, NULL variables are converted to empty parameters. We have to convert them back to NULL.
