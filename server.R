@@ -26,6 +26,7 @@ game_scene <- div(
   uiOutput("leave_button"),
   uiOutput("style_checkbox"),
   uiOutput("game_general_info"),
+  uiOutput("own_nickname"),
   uiOutput("players_table"),
   uiOutput("history_table"),
   uiOutput("hands"),
@@ -292,6 +293,10 @@ game_server <- function(input, output, session) {
       )
     }
     list(renderTable(info_table, include.colnames = FALSE))
+  })
+  
+  output$own_nickname <- renderUI({
+    if (nickname() != "") h5(HTML(paste0("You are playing as: ", nickname(), ".")))
   })
   
   output$players_table <- renderUI({
