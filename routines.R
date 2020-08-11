@@ -40,12 +40,17 @@ format_hand <- function(hand) {
     paste0(collapse = "")
 }
 
-format_players <- function(players) {
+format_players <- function(players, own_nickname = "") {
   player_table <- players %>%
     unlist() %>%
     matrix(nrow = length(players), byrow = T) %>%
     data.frame(stringsAsFactors = FALSE) %>%
     set_colnames(c("Player", "Cards"))
+  
+  # Mark own nickname as 'You'
+  if (!own_nickname == "") {
+    player_table$Player[player_table$Player == own_nickname] <- "You"
+  }
   
   # Check if some players have already lost
   if (any(player_table$Cards == "0")) {
