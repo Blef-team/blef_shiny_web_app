@@ -15,21 +15,18 @@ catch_null = function(x) {
   ifelse(length(x) == 0, "Not available", x)
 }
 
-format_all_hands <- function(hands) {
+format_all_hands <- function(hands, own_nickname = "") {
   if (length(hands) == 0) {
     return(NULL)
   } else {
-    return(
-      do.call(
-        rbind,
-        lapply(hands, function(p) 
-          data.frame(
-            Player = p$nickname,
-            Cards = format_hand(p$hand)
-          )
-        )
-      )
+    list_of_hands <- lapply(
+      hands, 
+      function(p) {
+        effective_nickname <- if_else(p$nickname == own_nickname, "You", p$nickname)
+        data.frame(Player = effective_nickname, Cards = format_hand(p$hand))
+      }
     )
+    return(do.call(rbind, list_of_hands))
   }
 }
 

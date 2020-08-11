@@ -332,7 +332,11 @@ game_server <- function(input, output, session) {
       } else if (length(game$hands) > 1) {
         list(
           h5("Hands:"),
-          renderTable(format_all_hands(game$hands), include.colnames = FALSE, sanitize.text.function = function(x) x)
+          renderTable(
+            format_all_hands(game$hands, nickname()), 
+            include.colnames = FALSE, 
+            sanitize.text.function = function(x) x
+          )
         )
       }
     }
