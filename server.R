@@ -317,7 +317,7 @@ game_server <- function(input, output, session) {
     if (game$status == "Running") {
       list(
         h5("Actions so far:"),
-        renderTable(format_history(game$history), include.colnames = FALSE)
+        renderTable(format_history(game$history, nickname()), include.colnames = FALSE)
       )
     }
   })

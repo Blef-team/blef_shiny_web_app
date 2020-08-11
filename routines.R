@@ -71,17 +71,22 @@ format_players <- function(players, own_nickname = "") {
   return(player_table)
 }
 
-format_history <- function(history) {
+format_history <- function(history, own_nickname = "") {
   if (length(history) == 0) {
-    data.frame(message = "There hasn't been any bet yet.")
+    return(data.frame(message = "There hasn't been any bet yet."))
   } else {
-    history %>%
+    formatted <- history %>%
       unlist() %>%
       matrix(nrow = length(history), byrow = T) %>%
       data.frame(stringsAsFactors = FALSE) %>%
       set_colnames(c("Player", "Action ID")) %>%
       filter(`Action ID` != 89) %>%
       mutate(`Action ID` = sapply(`Action ID`, function(id) actions$description[as.numeric(id) + 1]))
+    # Mark own nickname as 'You'
+    if (!own_nickname == "") {
+      formatted$Player[formatted$Player == own_nickname] <- "You"
+    }
+    return(formatted)
   }
 }
 
