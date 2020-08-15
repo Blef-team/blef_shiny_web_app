@@ -122,6 +122,7 @@ lobby_server <- function(input, output, session) {
     games(),
     style = "bootstrap",
     rownames = FALSE,
+    colnames = str_remove(colnames(games()), "Join|Observe"),
     escape = FALSE,
     options = list(
       ordering = FALSE,
