@@ -109,10 +109,15 @@ lobby_server <- function(input, output, session) {
     return(output)
   })
   
+  button_generator <- function(len, id, ...) {
+    sapply(1:len, function(i) as.character(actionButton(paste0(id, i), ...)))
+  }
+  
   output$games_table <- renderDT(
     games(),
     style = "bootstrap",
     rownames = FALSE,
+    escape = FALSE,
     options = list(
       ordering = FALSE,
       dom = "t"
@@ -134,12 +139,18 @@ lobby_server <- function(input, output, session) {
             unlist() %>%
             matrix(nrow = length(raw_games), byrow = T) %>%
             data.frame(stringsAsFactors = FALSE) %>%
-            set_colnames(c("UUID", "Players", "Started"))
+            set_colnames(c("UUID", "Players", "Started")) %>%
+            mutate(Observe = button_generator(length(raw_games), 'button_', label = "Observe", onclick = 'Shiny.onInputChange(\"observe_from_table\",  this.id)' ))
         )
       } else {
         games(NULL)
       }
     }
+  })
+  
+  observeEvent(input$observe_from_table, {
+    row <- as.numeric(strsplit(input$observe_from_table, "_")[[1]][2])
+    try_enter_game_room(games()$UUID[row], NULL, NULL)
   })
   
   observeEvent(input$create, {
