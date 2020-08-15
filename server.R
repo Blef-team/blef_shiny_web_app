@@ -7,6 +7,7 @@ library(httr)
 library(dplyr)
 library(digest)
 library(shiny.router)
+library(DT)
 
 base_path <- "http://18.132.35.89:8001/v2/"
 source("nicknames.R")
@@ -19,7 +20,7 @@ lobby_scene <- div(
   uiOutput("style_checkbox"),
   hr(),
   h4("Public games:"),
-  uiOutput("games_table")
+  DTOutput("games_table", width = 700)
 )
 
 game_scene <- div(
@@ -108,9 +109,14 @@ lobby_server <- function(input, output, session) {
     return(output)
   })
   
-  output$games_table <- renderTable(
-    {if (length(games()) > 0) games()}, 
-    sanitize.text.function = function(x) str_remove(x, "/")
+  output$games_table <- renderDT(
+    games(),
+    style = "bootstrap",
+    rownames = FALSE,
+    options = list(
+      ordering = FALSE,
+      dom = "t"
+    )
   )
   
   observe({
@@ -128,8 +134,7 @@ lobby_server <- function(input, output, session) {
             unlist() %>%
             matrix(nrow = length(raw_games), byrow = T) %>%
             data.frame(stringsAsFactors = FALSE) %>%
-            set_colnames(c("UUID", "Players", "Started")) %>%
-            mutate(UUID = sapply(UUID, function(x) HTML(paste0("<div style=\"font-family: Consolas\">", x, "</div>"))))
+            set_colnames(c("UUID", "Players", "Started"))
         )
       } else {
         games(NULL)

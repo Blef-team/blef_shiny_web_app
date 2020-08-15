@@ -7,5 +7,6 @@ if(!require(httr)) install.packages("httr", repos = "http://cran.us.r-project.or
 if(!require(dplyr)) install.packages("dplyr", repos = "http://cran.us.r-project.org")
 if(!require(digest)) install.packages("digest", repos = "http://cran.us.r-project.org")
 if(!require(shiny.router)) install.packages("shiny.router", repos = "http://cran.us.r-project.org")
+if(!require(DT)) install.packages("DT", repos = "http://cran.us.r-project.org")
 
 shiny::runApp(host = "0.0.0.0", port = 4306)
