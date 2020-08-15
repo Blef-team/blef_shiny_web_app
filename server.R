@@ -145,6 +145,7 @@ lobby_server <- function(input, output, session) {
             matrix(nrow = length(raw_games), byrow = T) %>%
             data.frame(stringsAsFactors = FALSE) %>%
             set_colnames(c("UUID", "Players", "Started")) %>%
+            mutate(Started = ifelse(Started, "Yes", "No")) %>%
             mutate(Join = button_generator(length(raw_games), 'button_', label = "Join", onclick = 'Shiny.onInputChange(\"join_from_table\",  this.id)' )) %>%
             mutate(Observe = button_generator(length(raw_games), 'button_', label = "Observe", onclick = 'Shiny.onInputChange(\"observe_from_table\",  this.id)' ))
         )
