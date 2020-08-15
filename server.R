@@ -145,12 +145,20 @@ lobby_server <- function(input, output, session) {
             matrix(nrow = length(raw_games), byrow = T) %>%
             data.frame(stringsAsFactors = FALSE) %>%
             set_colnames(c("UUID", "Players", "Started")) %>%
+            mutate(Join = button_generator(length(raw_games), 'button_', label = "Join", onclick = 'Shiny.onInputChange(\"join_from_table\",  this.id)' )) %>%
             mutate(Observe = button_generator(length(raw_games), 'button_', label = "Observe", onclick = 'Shiny.onInputChange(\"observe_from_table\",  this.id)' ))
         )
       } else {
         games(NULL)
       }
     }
+  })
+  
+  observeEvent(input$join_from_table, {
+    row <- as.numeric(strsplit(input$join_from_table, "_")[[1]][2])
+    game_uuid <- games()$UUID[row]
+    url <- make_URL_for_join(game_uuid, input$dark_mode)
+    session$sendCustomMessage("redirecter", url)
   })
   
   observeEvent(input$observe_from_table, {
