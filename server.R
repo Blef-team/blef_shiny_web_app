@@ -130,6 +130,13 @@ lobby_server <- function(input, output, session) {
     )
   )
   
+  create_join_button <- function(id) {
+    as.character(actionButton(paste0("button_", id), label = "Join", onclick = 'Shiny.onInputChange(\"join_from_table\", this.id)'))
+  } 
+  create_observe_button <- function(id) {
+    as.character(actionButton(paste0("button_", id), label = "Observe", onclick = 'Shiny.onInputChange(\"observe_from_table\", this.id)'))
+  }
+  
   observe({
     invalidateLater(1000)
     response <- try(GET(paste0(base_path, "games")), silent = TRUE)
@@ -146,9 +153,11 @@ lobby_server <- function(input, output, session) {
             matrix(nrow = length(raw_games), byrow = T) %>%
             data.frame(stringsAsFactors = FALSE) %>%
             set_colnames(c("UUID", "Players", "Started")) %>%
-            mutate(Started = ifelse(Started, "Yes", "No")) %>%
-            mutate(Join = button_generator(length(raw_games), 'button_', label = "Join", onclick = 'Shiny.onInputChange(\"join_from_table\",  this.id)' )) %>%
-            mutate(Observe = button_generator(length(raw_games), 'button_', label = "Observe", onclick = 'Shiny.onInputChange(\"observe_from_table\",  this.id)' ))
+            mutate(
+              Join = sapply(1:nrow(.), function(i) ifelse(.$Started[i] == FALSE, create_join_button(i), NA)),
+              Observe = sapply(1:nrow(.), function(i) create_observe_button(i)),
+              Started = ifelse(Started, "Yes", "No")
+            )
         )
       } else {
         games(NULL)
