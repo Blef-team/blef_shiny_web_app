@@ -26,6 +26,7 @@ game_scene <- div(
   uiOutput("leave_button"),
   uiOutput("style_checkbox"),
   uiOutput("game_general_info"),
+  uiOutput("own_nickname"),
   uiOutput("players_table"),
   uiOutput("history_table"),
   uiOutput("hands"),
@@ -294,21 +295,25 @@ game_server <- function(input, output, session) {
     list(renderTable(info_table, include.colnames = FALSE))
   })
   
+  output$own_nickname <- renderUI({
+    if (nickname() != "") h5(HTML(paste0("You are playing as: ", nickname(), ".")))
+  })
+  
   output$players_table <- renderUI({
     if (game$status == "Not started") {
       list(
         h5("Players:"),
-        renderTable(format_players(game$players)$Player, include.colnames = FALSE)
+        renderTable(format_players(game$players, nickname())$Player, include.colnames = FALSE)
       )
     } else if (game$status == "Running") {
       list(
         h5("Cards per player:"),
-        renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x)
+        renderTable(format_players(game$players, nickname()), include.colnames = FALSE, sanitize.text.function = function(x) x)
       )
     } else if (game$status == "Finished") {
       list(
         h5("Results:"),
-        renderTable(format_players(game$players), include.colnames = FALSE, sanitize.text.function = function(x) x)
+        renderTable(format_players(game$players, nickname()), include.colnames = FALSE, sanitize.text.function = function(x) x)
       )
     }
   })
@@ -317,7 +322,7 @@ game_server <- function(input, output, session) {
     if (game$status == "Running") {
       list(
         h5("Actions so far:"),
-        renderTable(format_history(game$history), include.colnames = FALSE)
+        renderTable(format_history(game$history, nickname()), include.colnames = FALSE)
       )
     }
   })
@@ -332,7 +337,11 @@ game_server <- function(input, output, session) {
       } else if (length(game$hands) > 1) {
         list(
           h5("Hands:"),
-          renderTable(format_all_hands(game$hands), include.colnames = FALSE, sanitize.text.function = function(x) x)
+          renderTable(
+            format_all_hands(game$hands, nickname()), 
+            include.colnames = FALSE, 
+            sanitize.text.function = function(x) x
+          )
         )
       }
     }
@@ -369,7 +378,12 @@ game_server <- function(input, output, session) {
       h5(paste0("Current player: ", game$cp_nickname))
     } else if (length(game$history) > 2) {
       if (last(game$history)$action_id == 89) {
-        h5(HTML(paste0("<b>", last(game$history)$player, "</b>", " lost the round.")))
+        effective_nickname <- if_else(
+          nickname() == last(game$history)$player, 
+          "You", 
+          last(game$history)$player
+        )
+        h5(HTML(paste0("<b>", effective_nickname, "</b>", " lost the round.")))
       }
     }
   })

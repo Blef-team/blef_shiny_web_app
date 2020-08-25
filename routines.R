@@ -15,21 +15,18 @@ catch_null = function(x) {
   ifelse(length(x) == 0, "Not available", x)
 }
 
-format_all_hands <- function(hands) {
+format_all_hands <- function(hands, own_nickname = "") {
   if (length(hands) == 0) {
     return(NULL)
   } else {
-    return(
-      do.call(
-        rbind,
-        lapply(hands, function(p) 
-          data.frame(
-            Player = p$nickname,
-            Cards = format_hand(p$hand)
-          )
-        )
-      )
+    list_of_hands <- lapply(
+      hands, 
+      function(p) {
+        effective_nickname <- if_else(p$nickname == own_nickname, "You", p$nickname)
+        data.frame(Player = effective_nickname, Cards = format_hand(p$hand))
+      }
     )
+    return(do.call(rbind, list_of_hands))
   }
 }
 
@@ -40,12 +37,17 @@ format_hand <- function(hand) {
     paste0(collapse = "")
 }
 
-format_players <- function(players) {
+format_players <- function(players, own_nickname = "") {
   player_table <- players %>%
     unlist() %>%
     matrix(nrow = length(players), byrow = T) %>%
     data.frame(stringsAsFactors = FALSE) %>%
     set_colnames(c("Player", "Cards"))
+  
+  # Mark own nickname as 'You'
+  if (!own_nickname == "") {
+    player_table$Player[player_table$Player == own_nickname] <- "You"
+  }
   
   # Check if some players have already lost
   if (any(player_table$Cards == "0")) {
@@ -66,17 +68,22 @@ format_players <- function(players) {
   return(player_table)
 }
 
-format_history <- function(history) {
+format_history <- function(history, own_nickname = "") {
   if (length(history) == 0) {
-    data.frame(message = "There hasn't been any bet yet.")
+    return(data.frame(message = "There hasn't been any bet yet."))
   } else {
-    history %>%
+    formatted <- history %>%
       unlist() %>%
       matrix(nrow = length(history), byrow = T) %>%
       data.frame(stringsAsFactors = FALSE) %>%
       set_colnames(c("Player", "Action ID")) %>%
       filter(`Action ID` != 89) %>%
       mutate(`Action ID` = sapply(`Action ID`, function(id) actions$description[as.numeric(id) + 1]))
+    # Mark own nickname as 'You'
+    if (!own_nickname == "") {
+      formatted$Player[formatted$Player == own_nickname] <- "You"
+    }
+    return(formatted)
   }
 }
 
