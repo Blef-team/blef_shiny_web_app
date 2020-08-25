@@ -114,10 +114,6 @@ lobby_server <- function(input, output, session) {
     return(output)
   })
   
-  button_generator <- function(len, id, ...) {
-    sapply(1:len, function(i) as.character(actionButton(paste0(id, i), ...)))
-  }
-  
   output$games_table <- renderDT(
     games(),
     style = "bootstrap",
