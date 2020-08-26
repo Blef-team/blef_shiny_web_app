@@ -7,6 +7,7 @@ library(httr)
 library(dplyr)
 library(digest)
 library(shiny.router)
+library(DT)
 
 base_path <- "http://18.132.35.89:8001/v2/"
 source("nicknames.R")
@@ -19,7 +20,12 @@ lobby_scene <- div(
   uiOutput("style_checkbox"),
   hr(),
   h4("Public games:"),
-  uiOutput("games_table")
+  DTOutput("games_table", width = 700)
+)
+
+join_scene <- div(
+  uiOutput("style_checkbox"),
+  uiOutput("join_ui")
 )
 
 game_scene <- div(
@@ -109,10 +115,24 @@ lobby_server <- function(input, output, session) {
     return(output)
   })
   
-  output$games_table <- renderTable(
-    {if (length(games()) > 0) games()}, 
-    sanitize.text.function = function(x) str_remove(x, "/")
+  output$games_table <- renderDT(
+    games(),
+    style = "bootstrap",
+    rownames = FALSE,
+    colnames = str_remove(colnames(games()), "Join|Observe"),
+    escape = FALSE,
+    options = list(
+      ordering = FALSE,
+      dom = "t"
+    )
   )
+  
+  create_join_button <- function(id) {
+    as.character(actionButton(paste0("button_", id), label = "Join", onclick = 'Shiny.onInputChange(\"join_from_table\", this.id)'))
+  } 
+  create_observe_button <- function(id) {
+    as.character(actionButton(paste0("button_", id), label = "Observe", onclick = 'Shiny.onInputChange(\"observe_from_table\", this.id)'))
+  }
   
   observe({
     invalidateLater(1000)
@@ -130,12 +150,28 @@ lobby_server <- function(input, output, session) {
             matrix(nrow = length(raw_games), byrow = T) %>%
             data.frame(stringsAsFactors = FALSE) %>%
             set_colnames(c("UUID", "Players", "Started")) %>%
-            mutate(UUID = sapply(UUID, function(x) HTML(paste0("<div style=\"font-family: Consolas\">", x, "</div>"))))
+            mutate(
+              Join = sapply(1:nrow(.), function(i) ifelse(.$Started[i] == FALSE, create_join_button(i), NA)),
+              Observe = sapply(1:nrow(.), function(i) create_observe_button(i)),
+              Started = ifelse(Started, "Yes", "No")
+            )
         )
       } else {
         games(NULL)
       }
     }
+  })
+  
+  observeEvent(input$join_from_table, {
+    row <- as.numeric(strsplit(input$join_from_table, "_")[[1]][2])
+    game_uuid <- games()$UUID[row]
+    url <- make_URL_for_join(game_uuid, input$dark_mode)
+    session$sendCustomMessage("redirecter", url)
+  })
+  
+  observeEvent(input$observe_from_table, {
+    row <- as.numeric(strsplit(input$observe_from_table, "_")[[1]][2])
+    try_enter_game_room(games()$UUID[row], NULL, NULL)
   })
   
   observeEvent(input$create, {
@@ -204,6 +240,76 @@ lobby_server <- function(input, output, session) {
   
   observeEvent(input$cancel, {
     action_initialised("none")
+  })
+}
+
+join_server <- function(input, output, session) {
+  game_uuid <- reactive(get_query_param()$game_uuid)
+  
+  dark_mode <- reactive({
+    if (is.null(get_query_param()$dark_mode)) {
+      return(FALSE)
+    } else {
+      as.logical(get_query_param()$dark_mode)
+    }
+  })
+  
+  output$style_checkbox <- renderUI({
+    checkboxInput("dark_mode", "Dark theme", value = dark_mode())
+  })
+  
+  output$style <- renderUI({
+    if (!is.null(input$dark_mode)) {
+      if (input$dark_mode) {
+        includeCSS("www/darkly.css")
+      } else {
+        includeCSS("www/flatly.css")
+      }
+    }
+  })
+  
+  output$join_ui <- renderUI({
+    list(
+      h5(HTML(paste0("You are joining game <b>", game_uuid(), "<b/>."))),
+      hr(),
+      textInput("nickname", HTML("Pick a nickname<br/>(or leave blank and we'll generate one):"), width = 300),
+      actionButton("leave", "Cancel"),
+      actionButton("confirm", "Confirm")
+    )
+  })
+  
+  observeEvent(input$leave, {
+    url <- make_URL_for_lobby("", "", "", input$dark_mode)
+    session$sendCustomMessage("redirecter", url)
+  })
+  
+  try_enter_game_room <- function(game_uuid_wanted, player_uuid_wanted, nickname_wanted) {
+    response <- try(GET(paste0(base_path, "games/", game_uuid_wanted, "?player_uuid=", player_uuid_wanted)), silent = TRUE)
+    if (is_empty_response(response)) {
+      shinyalert("Error", "There was an error querying the game engine")
+    } else if (status_code(response) != 200) {
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+    } else {
+      url <- make_URL_for_game(game_uuid_wanted, player_uuid_wanted, nickname_wanted, input$dark_mode)
+      session$sendCustomMessage("redirecter", url)
+    }
+  }
+  
+  observeEvent(input$confirm, {
+    if (input$nickname != "" & !str_detect(input$nickname, "^[a-zA-Z]\\w*$")) {
+      shinyalert("Invalid nickname", "It won't be possible to join with this nickname. A nickname must start with a letter and only have alphanumeric characters")
+    } else {
+      lower_case_uuid <- str_to_lower(game_uuid())
+      effective_nickname <- if (input$nickname == "") generate_name() else input$nickname
+      response <- try(GET(paste0(base_path, "games/", lower_case_uuid, "/join?nickname=", effective_nickname)), silent = TRUE)
+      if (is_empty_response(response)) {
+        shinyalert("Error", "There was an error querying the game engine")
+      } else if (status_code(response) != 200) {
+        shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
+      } else {
+        try_enter_game_room(lower_case_uuid, content(response)$player_uuid, effective_nickname)
+      }
+    }
   })
 }
 
@@ -511,6 +617,7 @@ redirect_server <- function(input, output, session) {
 
 router <- make_router(
   route("lobby", lobby_scene, lobby_server),
+  route("join", join_scene, join_server),
   route("play", game_scene, game_server),
   default = route("/", redirect_scene, redirect_server)
 )

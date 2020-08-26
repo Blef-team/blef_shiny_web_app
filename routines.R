@@ -91,6 +91,10 @@ make_URL_for_lobby <- function(game_uuid, player_uuid, nickname, dark_mode) {
   paste0("?game_uuid=", game_uuid, "&player_uuid=", player_uuid, "&nickname=", nickname, "&dark_mode=", dark_mode, "#!/lobby")
 }
 
+make_URL_for_join <- function(game_uuid, dark_mode) {
+  paste0("?game_uuid=", game_uuid, "&dark_mode=", dark_mode, "#!/join")
+}
+
 make_URL_for_game <- function(game_uuid, player_uuid, nickname, dark_mode) {
   paste0("?game_uuid=", game_uuid, "&player_uuid=", player_uuid, "&nickname=", nickname, "&dark_mode=", dark_mode, "#!/play")
 }
