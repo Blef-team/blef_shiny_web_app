@@ -38,12 +38,10 @@ format_hand <- function(hand) {
 }
 
 format_players <- function(players, own_nickname = "") {
-  player_table <- players %>%
-    unlist() %>%
-    matrix(nrow = length(players), byrow = T) %>%
+  player_table <- do.call(rbind, lapply(players, unlist)) %>%
     data.frame(stringsAsFactors = FALSE) %>%
-    set_colnames(c("Player", "Cards"))
-  
+    select(Player = nickname, Cards = n_cards)
+
   # Mark own nickname as 'You'
   if (!own_nickname == "") {
     player_table$Player[player_table$Player == own_nickname] <- "You"
@@ -72,11 +70,9 @@ format_history <- function(history, own_nickname = "") {
   if (length(history) == 0) {
     return(data.frame(message = "There hasn't been any bet yet."))
   } else {
-    formatted <- history %>%
-      unlist() %>%
-      matrix(nrow = length(history), byrow = T) %>%
+    formatted <- do.call(rbind, lapply(history, unlist)) %>%
       data.frame(stringsAsFactors = FALSE) %>%
-      set_colnames(c("Player", "Action ID")) %>%
+      select(Player = player, `Action ID` = action_id) %>%
       filter(`Action ID` != 89) %>%
       mutate(`Action ID` = sapply(`Action ID`, function(id) actions$description[as.numeric(id) + 1]))
     # Mark own nickname as 'You'
