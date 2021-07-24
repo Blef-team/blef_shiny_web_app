@@ -9,7 +9,7 @@ library(digest)
 library(shiny.router)
 library(DT)
 
-base_path <- "https://n4p6oovxsg.execute-api.eu-west-2.amazonaws.com/"
+base_path <- "http://18.132.35.89:8001/v2/"
 source("nicknames.R")
 actions <- read_csv("action_descriptions.csv", col_types = cols())
 source("routines.R", local = TRUE)
@@ -77,7 +77,7 @@ lobby_server <- function(input, output, session) {
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
-      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)))
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     } else {
       url <- make_URL_for_game(game_uuid_wanted, player_uuid_wanted, nickname_wanted, input$dark_mode)
       session$sendCustomMessage("redirecter", url)
@@ -144,15 +144,12 @@ lobby_server <- function(input, output, session) {
       } else if (length(content(response)) > 0) {
         raw_games <- content(response)
         for (i in 1:length(raw_games)) raw_games[[i]]$players <- paste(raw_games[[i]]$players, collapse = ", ")
-        renamed_cols <- lapply(raw_games, function(game) {
-          data.frame(
-            UUID = game$uuid,
-            Started = game$started,
-            Players = paste(game$players, collapse = ", ")
-          )
-        })
         games(
-          do.call(rbind, renamed_cols) %>%
+          raw_games %>%
+            unlist() %>%
+            matrix(nrow = length(raw_games), byrow = T) %>%
+            data.frame(stringsAsFactors = FALSE) %>%
+            set_colnames(c("UUID", "Players", "Started")) %>%
             mutate(
               Join = sapply(1:nrow(.), function(i) ifelse(.$Started[i] == FALSE, create_join_button(i), NA)),
               Observe = sapply(1:nrow(.), function(i) create_observe_button(i)),
@@ -203,7 +200,7 @@ lobby_server <- function(input, output, session) {
         if (is_empty_response(response)) {
           shinyalert("Error", paste0("The game was created with UUID ", created_game_uuid, " but, while trying to join, there was an error querying the game engine"))
         } else if (status_code(response) != 200) {
-          shinyalert("Error", paste0("The game was created with UUID ", created_game_uuid, " but, while trying to join, the engine returned an error saying: ", content(response)))
+          shinyalert("Error", paste0("The game was created with UUID ", created_game_uuid, " but, while trying to join, the engine returned an error saying: ", content(response)$error))
         } else {
           try_enter_game_room(created_game_uuid, content(response)$player_uuid, effective_nickname)
         }
@@ -225,7 +222,7 @@ lobby_server <- function(input, output, session) {
       if (is_empty_response(response)) {
         shinyalert("Error", "There was an error querying the game engine")
       } else if (status_code(response) != 200) {
-        shinyalert("Error", paste0("The engine returned an error saying: ", content(response)))
+        shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
       } else {
         try_enter_game_room(lower_case_uuid, content(response)$player_uuid, effective_nickname)
       }
@@ -291,7 +288,7 @@ join_server <- function(input, output, session) {
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
-      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)))
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     } else {
       url <- make_URL_for_game(game_uuid_wanted, player_uuid_wanted, nickname_wanted, input$dark_mode)
       session$sendCustomMessage("redirecter", url)
@@ -308,7 +305,7 @@ join_server <- function(input, output, session) {
       if (is_empty_response(response)) {
         shinyalert("Error", "There was an error querying the game engine")
       } else if (status_code(response) != 200) {
-        shinyalert("Error", paste0("The engine returned an error saying: ", content(response)))
+        shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
       } else {
         try_enter_game_room(lower_case_uuid, content(response)$player_uuid, effective_nickname)
       }
@@ -371,15 +368,11 @@ game_server <- function(input, output, session) {
   lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
   
   try_update_to_current_state <- function(game_uuid, player_uuid, round = -1) {
-    if(round < 1) {
-      response <- try(GET(paste0(base_path, "games/", game_uuid, "?player_uuid=", player_uuid)), silent = TRUE)
-    } else {
-      response <- try(GET(paste0(base_path, "games/", game_uuid, "?player_uuid=", player_uuid, "&round=", round)), silent = TRUE)
-    }
+    response <- try(GET(paste0(base_path, "games/", game_uuid, "?player_uuid=", player_uuid, "&round=", round)), silent = TRUE)
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
-      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)))
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     } else {
       lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
     }
@@ -527,7 +520,7 @@ game_server <- function(input, output, session) {
         if (is_empty_response(response)) {
           shinyalert("Error", "There was an error querying the game engine")
         } else if (status_code(response) != 200) {
-          shinyalert("Error", paste0("The engine returned an error saying: ", content(response)))
+          shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
         } else {
           # If a game hasn't progressed to another round, just update the info
           if (catch_null(game$status) == "Not started" | (content(response)$status == "Running" & content(response)$round_number == catch_null(game$round_number))) {
@@ -538,7 +531,7 @@ game_server <- function(input, output, session) {
             if (is_empty_response(response)) {
               shinyalert("Error", "There was an error querying the game engine")
             } else if (status_code(response) != 200) {
-              shinyalert("Error", paste0("The engine returned an error saying: ", content(response)))
+              shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
             } else {
               lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
             }
@@ -555,7 +548,7 @@ game_server <- function(input, output, session) {
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
-      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)))
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     } else {
       lapply(names(content(response)), function(x) game[[x]] <- content(response)[[x]])
       new_round_available(FALSE)
@@ -572,7 +565,7 @@ game_server <- function(input, output, session) {
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 202) {
-      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)))
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     }
     try_update_to_current_state(game_uuid(), player_uuid())
   })
@@ -582,7 +575,7 @@ game_server <- function(input, output, session) {
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
-      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)))
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     }
     try_update_to_current_state(game_uuid(), player_uuid())
   })
@@ -592,7 +585,7 @@ game_server <- function(input, output, session) {
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
-      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)))
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     }
     try_update_to_current_state(game_uuid(), player_uuid())
   })
@@ -601,6 +594,8 @@ game_server <- function(input, output, session) {
     response <- try(GET(paste0(base_path, "games/", game_uuid(), "/play?player_uuid=", player_uuid(), "&action_id=", input$bet_id)), silent = TRUE)
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
+    } else if (status_code(response) != 200) {
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     }
     try_update_to_current_state(game_uuid(), player_uuid(), game$round_number)
   })
@@ -610,7 +605,7 @@ game_server <- function(input, output, session) {
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
-      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)))
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)$error))
     }
     try_update_to_current_state(game_uuid(), player_uuid(), game$round_number)
   })
