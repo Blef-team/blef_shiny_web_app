@@ -146,17 +146,15 @@ lobby_server <- function(input, output, session) {
         for (i in 1:length(raw_games)) raw_games[[i]]$players <- paste(raw_games[[i]]$players, collapse = ", ")
         renamed_cols <- lapply(raw_games, function(game) {
           data.frame(
-            UUID = game$uuid,
-            Started = game$started,
+            UUID = game$game_uuid,
             Players = paste(game$players, collapse = ", ")
           )
         })
         games(
           do.call(rbind, renamed_cols) %>%
             mutate(
-              Join = sapply(1:nrow(.), function(i) ifelse(.$Started[i] == FALSE, create_join_button(i), NA)),
-              Observe = sapply(1:nrow(.), function(i) create_observe_button(i)),
-              Started = ifelse(Started, "Yes", "No")
+              Join = sapply(1:nrow(.), function(i) create_join_button(i)),
+              Observe = sapply(1:nrow(.), function(i) create_observe_button(i))
             )
         )
       } else {
@@ -397,12 +395,12 @@ game_server <- function(input, output, session) {
     if (game$status == "Not started") {
       info_table <- data.frame(
         keys = c("Game UUID", "Admin nickname", "Game public"),
-        values = as.character(c(game_uuid(), game$admin_nickname, ifelse(game$public, "Yes", "No")))
+        values = as.character(c(game_uuid(), game$admin_nickname, ifelse(game$public == "true", "Yes", "No")))
       )
     } else {
       info_table <- data.frame(
         keys = c("Game public", "Maximum allowed cards"),
-        values = as.character(c(ifelse(game$public, "Yes", "No"), game$max_cards))
+        values = as.character(c(ifelse(game$public == "true", "Yes", "No"), game$max_cards))
       )
     }
     list(renderTable(info_table, include.colnames = FALSE))
@@ -511,8 +509,8 @@ game_server <- function(input, output, session) {
     if (game$status == "Not started" & catch_null(nickname()) == game$admin_nickname) {
       list(
         start_button <- actionButton("start", "Start game"),
-        privacy_button <- if (!game$public) actionButton("make_public", "Make public"),
-        privacy_button <- if (game$public) actionButton("make_private", "Make private")
+        privacy_button <- if (game$public == "false") actionButton("make_public", "Make public"),
+        privacy_button <- if (game$public == "true") actionButton("make_private", "Make private")
       )
     }
   })
