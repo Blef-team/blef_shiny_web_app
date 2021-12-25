@@ -403,13 +403,8 @@ game_server <- function(input, output, session) {
         keys = c("Room", "Admin nickname"),
         values = as.character(c(ifelse(game$public == "true", game$room, "Private"), format_nickname(game$admin_nickname, catch_null(nickname()))))
       )
-    } else {
-      info_table <- data.frame(
-        keys = "Maximum allowed cards",
-        values = as.character(game$max_cards)
-      )
+      list(renderTable(info_table, include.colnames = FALSE, sanitize.text.function = function(x) x))
     }
-    list(renderTable(info_table, include.colnames = FALSE, sanitize.text.function = function(x) x))
   })
   
   output$players_table <- renderUI({
