@@ -185,7 +185,7 @@ lobby_server <- function(input, output, session) {
   })
   
   observeEvent(input$confirm_create, {
-    if (input$nickname != "" & !str_detect(input$nickname, "^[a-zA-Z]\\w*$")) {
+    if (input$nickname != "" & !str_detect(input$nickname, "^[a-zA-Z][\\w| ]*$")) {
       shinyalert(
         "Invalid nickname", 
         "It won't be possible to join with this nickname. 
@@ -201,7 +201,7 @@ lobby_server <- function(input, output, session) {
         shinyalert("Error", paste0("The engine returned an error saying: ", content(response)))
       } else {
         created_game_uuid <- content(response)$game_uuid
-        effective_nickname <- if (input$nickname == "") generate_name() else input$nickname
+        effective_nickname <- if (input$nickname == "") generate_name() else input$nickname %>% str_replace_all(" ", "_")
         response <- try(GET(paste0(base_path, "games/", created_game_uuid, "/join?nickname=", effective_nickname)), silent = TRUE)
         if (is_empty_response(response)) {
           shinyalert("Error", paste0("The game was created with UUID ", created_game_uuid, " but, while trying to join, there was an error querying the game engine"))
@@ -219,11 +219,11 @@ lobby_server <- function(input, output, session) {
   })
   
   observeEvent(input$confirm_join, {
-    if (input$nickname != "" & !str_detect(input$nickname, "^[a-zA-Z]\\w*$")) {
+    if (input$nickname != "" & !str_detect(input$nickname, "^[a-zA-Z][\\w| ]*$")) {
       shinyalert("Invalid nickname", "It won't be possible to join with this nickname. A nickname must start with a letter and only have alphanumeric characters")
     } else {
       lower_case_uuid <- str_to_lower(input$game_uuid)
-      effective_nickname <- if (input$nickname == "") generate_name() else input$nickname
+      effective_nickname <- if (input$nickname == "") generate_name() else input$nickname %>% str_replace_all(" ", "_")
       response <- try(GET(paste0(base_path, "games/", lower_case_uuid, "/join?nickname=", effective_nickname)), silent = TRUE)
       if (is_empty_response(response)) {
         shinyalert("Error", "There was an error querying the game engine")
@@ -302,11 +302,11 @@ join_server <- function(input, output, session) {
   }
   
   observeEvent(input$confirm, {
-    if (input$nickname != "" & !str_detect(input$nickname, "^[a-zA-Z]\\w*$")) {
+    if (input$nickname != "" & !str_detect(input$nickname, "^[a-zA-Z][\\w| ]*$")) {
       shinyalert("Invalid nickname", "It won't be possible to join with this nickname. A nickname must start with a letter and only have alphanumeric characters")
     } else {
       lower_case_uuid <- str_to_lower(game_uuid())
-      effective_nickname <- if (input$nickname == "") generate_name() else input$nickname
+      effective_nickname <- if (input$nickname == "") generate_name() else input$nickname %>% str_replace_all(" ", "_")
       response <- try(GET(paste0(base_path, "games/", lower_case_uuid, "/join?nickname=", effective_nickname)), silent = TRUE)
       if (is_empty_response(response)) {
         shinyalert("Error", "There was an error querying the game engine")
