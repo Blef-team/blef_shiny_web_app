@@ -15,6 +15,10 @@ catch_null = function(x) {
   ifelse(length(x) == 0, "Not available", x)
 }
 
+format_nickname <- function(nickname, own_nickname) {
+  ifelse(nickname == own_nickname, paste0("<b>", own_nickname, "</b>"), nickname)
+}
+
 format_all_hands <- function(hands, own_nickname = "") {
   if (length(hands) == 0) {
     return(NULL)
@@ -22,7 +26,7 @@ format_all_hands <- function(hands, own_nickname = "") {
     list_of_hands <- lapply(
       hands, 
       function(p) {
-        effective_nickname <- if_else(p$nickname == own_nickname, "You", p$nickname)
+        effective_nickname <- format_nickname(p$nickname, own_nickname)
         data.frame(Player = effective_nickname, Cards = format_hand(p$hand))
       }
     )
@@ -44,7 +48,7 @@ format_players <- function(players, own_nickname = "") {
 
   # Mark own nickname as 'You'
   if (!own_nickname == "") {
-    player_table$Player[player_table$Player == own_nickname] <- "You"
+    player_table$Player <- sapply(player_table$Player, function(x) format_nickname(x, own_nickname))
   }
   
   # Check if some players have already lost
@@ -75,9 +79,9 @@ format_history <- function(history, own_nickname = "") {
       select(Player = player, `Action ID` = action_id) %>%
       filter(`Action ID` != 89) %>%
       mutate(`Action ID` = sapply(`Action ID`, function(id) actions$description[as.numeric(id) + 1]))
-    # Mark own nickname as 'You'
+    # Highlight own nickname
     if (!own_nickname == "") {
-      formatted$Player[formatted$Player == own_nickname] <- "You"
+      formatted$Player <- sapply(formatted$Player, function(x) format_nickname(x, own_nickname))
     }
     return(formatted)
   }

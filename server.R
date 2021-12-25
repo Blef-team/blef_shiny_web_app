@@ -489,11 +489,7 @@ game_server <- function(input, output, session) {
       h5(paste0("Current player: ", game$cp_nickname))
     } else if (length(game$history) > 2) {
       if (last(game$history)$action_id == 89) {
-        effective_nickname <- if_else(
-          nickname() == last(game$history)$player, 
-          "You", 
-          last(game$history)$player
-        )
+        effective_nickname <- format_nickname(last(game$history)$player, nickname())
         h5(HTML(paste0("<b>", effective_nickname, "</b>", " lost the round.")))
       }
     }
