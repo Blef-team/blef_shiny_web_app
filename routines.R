@@ -27,6 +27,27 @@ format_players_not_started <- function(players, own_nickname = "") {
   return(player_table)
 }
 
+format_players_running <- function(players, hands, max_cards, own_nickname = "") {
+  player_table <- do.call(rbind, lapply(players, unlist)) %>%
+    data.frame(stringsAsFactors = FALSE) %>%
+    select( nickname, n_cards)
+  player_table <- data.frame(info = sapply(1:nrow(player_table), function(i) {
+    nickname <- player_table$nickname[i]
+    n_cards <- player_table$n_cards[i]
+    formatted_nickname <- format_nickname(nickname, own_nickname)
+    if (n_cards == 0) formatted_nickname <- paste0("<s>", formatted_nickname, "</s>")
+    hand_index <- sapply(hands, function(hand) hand$nickname == nickname)
+    if (any(hand_index)) {
+      hand <- hands[hand_index][[1]]$hand
+      formatted_hand <- format_open_hand(hand, as.numeric(max_cards))
+    } else {
+      formatted_hand <- format_closed_hand(as.numeric(n_cards), as.numeric(max_cards))
+    }
+    return(paste0(formatted_nickname, "<br>", formatted_hand))
+  }))
+  return(player_table)
+}
+
 format_players_finished <- function(players, own_nickname = "") {
   player_table <- do.call(rbind, lapply(players, unlist)) %>%
     data.frame(stringsAsFactors = FALSE) %>%
@@ -36,55 +57,28 @@ format_players_finished <- function(players, own_nickname = "") {
   return(player_table)
 }
 
-format_all_hands <- function(hands, own_nickname = "") {
-  if (length(hands) == 0) {
-    return(NULL)
-  } else {
-    list_of_hands <- lapply(
-      hands, 
-      function(p) {
-        effective_nickname <- format_nickname(p$nickname, own_nickname)
-        data.frame(Player = effective_nickname, Cards = format_hand(p$hand))
-      }
-    )
-    return(do.call(rbind, list_of_hands))
-  }
+format_closed_hand <- function(n_cards, max_cards) {
+  question_cards <- rep(
+    "<img src=\"assets/cardQuestion.png\" height=\"45\">",
+    n_cards
+  )
+  empty_cards <- rep(
+    "<img src=\"assets/cardEmpty2.png\" height=\"45\" style=\"opacity: 35%;\">",
+    max_cards - n_cards
+  )
+  return(paste0(c(question_cards, empty_cards), collapse = ""))
 }
 
-format_hand <- function(hand) {
-  lapply(hand, function(card) {
+format_open_hand <- function(hand, max_cards) {
+  open_cards <- lapply(hand, function(card) {
     as.character(img(src = paste0("assets/cards/cropped/", card$value, card$colour, ".png"), height = 45))
   }) %>%
     paste0(collapse = "")
-}
-
-format_players <- function(players, own_nickname = "") {
-  player_table <- do.call(rbind, lapply(players, unlist)) %>%
-    data.frame(stringsAsFactors = FALSE) %>%
-    select(Player = nickname, Cards = n_cards)
-
-  # Mark own nickname as 'You'
-  if (!own_nickname == "") {
-    player_table$Player <- sapply(player_table$Player, function(x) format_nickname(x, own_nickname))
-  }
-  
-  # Check if some players have already lost
-  if (any(player_table$Cards == "0")) {
-    # Check if the game is still going on
-    if (sum(player_table$Cards != "0") > 1) {
-      player_table$Cards <- sapply(player_table$Cards, function(n) {
-        text <- if (n == "0") "Lost" else n
-        return(text)
-      })
-    } else {
-      # If the game has finished
-      player_table$Cards <- sapply(player_table$Cards, function(n) {
-        text <- if (n == "0") "<b>Lost</b>" else "<b>Won</b>"
-        return(text)
-      })
-    }
-  }
-  return(player_table)
+  empty_cards <- rep(
+    "<img src=\"assets/cardEmpty2.png\" height=\"45\" style=\"opacity: 35%;\">",
+    max_cards - length(hand)
+  )
+  return(paste0(c(open_cards, empty_cards), collapse = ""))
 }
 
 format_history <- function(history, own_nickname = "") {
