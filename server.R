@@ -400,13 +400,13 @@ game_server <- function(input, output, session) {
   output$game_general_info <- renderUI({
     if (game$status == "Not started") {
       info_table <- data.frame(
-        keys = c("Game UUID", "Admin nickname", "Game public"),
-        values = as.character(c(game_uuid(), format_nickname(game$admin_nickname, catch_null(nickname())), ifelse(game$public == "true", "Yes", "No")))
+        keys = c("Room", "Admin nickname"),
+        values = as.character(c(ifelse(game$public == "true", game$room, "Private"), format_nickname(game$admin_nickname, catch_null(nickname()))))
       )
     } else {
       info_table <- data.frame(
-        keys = c("Game public", "Maximum allowed cards"),
-        values = as.character(c(ifelse(game$public == "true", "Yes", "No"), game$max_cards))
+        keys = "Maximum allowed cards",
+        values = as.character(game$max_cards)
       )
     }
     list(renderTable(info_table, include.colnames = FALSE, sanitize.text.function = function(x) x))
