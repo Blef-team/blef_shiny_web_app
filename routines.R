@@ -16,7 +16,8 @@ catch_null = function(x) {
 }
 
 format_nickname <- function(nickname, own_nickname) {
-  ifelse(nickname == own_nickname, paste0("<b>", own_nickname, "</b>"), nickname)
+  ifelse(nickname == own_nickname, paste0("<b>", own_nickname, "</b>"), nickname) %>%
+    str_replace_all("_", " ")
 }
 
 format_players_not_started <- function(players, own_nickname = "") {
