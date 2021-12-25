@@ -414,7 +414,7 @@ game_server <- function(input, output, session) {
     if (game$status == "Not started") {
       list(
         h5("Players:"),
-        renderTable(format_players(game$players, nickname())$Player, include.colnames = FALSE)
+        renderTable(format_players(game$players, nickname())$Player, include.colnames = FALSE, sanitize.text.function = function(x) x)
       )
     } else if (game$status == "Running") {
       list(
@@ -433,7 +433,7 @@ game_server <- function(input, output, session) {
     if (game$status == "Running") {
       list(
         h5("Actions so far:"),
-        renderTable(format_history(game$history, nickname()), include.colnames = FALSE)
+        renderTable(format_history(game$history, nickname()), include.colnames = FALSE, sanitize.text.function = function(x) x)
       )
     }
   })
