@@ -20,7 +20,7 @@ lobby_scene <- div(
   uiOutput("style_checkbox"),
   hr(),
   h4("Public games:"),
-  DTOutput("games_table", width = 700)
+  uiOutput("games_table")
 )
 
 join_scene <- div(
@@ -114,17 +114,23 @@ lobby_server <- function(input, output, session) {
     return(output)
   })
   
-  output$games_table <- renderDT(
-    games(),
-    style = "bootstrap",
-    rownames = FALSE,
-    colnames = str_remove(colnames(games()), "Join|Observe"),
-    escape = FALSE,
-    options = list(
-      ordering = FALSE,
-      dom = "t"
-    )
-  )
+  output$games_table <- renderUI({
+    if(!is.null(games())) {
+      list(
+        renderDT(
+          games() %>% select(-UUID),
+          style = "bootstrap",
+          rownames = FALSE,
+          colnames = c("Room", "Players", "", ""),
+          escape = FALSE,
+          options = list(
+            ordering = FALSE,
+            dom = "t"
+          )
+        )
+      )
+    }
+  }) 
   
   create_join_button <- function(id) {
     as.character(actionButton(paste0("button_", id), label = "Join", onclick = 'Shiny.onInputChange(\"join_from_table\", this.id)'))
@@ -146,6 +152,7 @@ lobby_server <- function(input, output, session) {
         renamed_cols <- lapply(raw_games, function(game) {
           data.frame(
             UUID = game$game_uuid,
+            Room = game$room,
             Players = paste(game$players, collapse = ", ")
           )
         })
