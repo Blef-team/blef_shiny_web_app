@@ -20,7 +20,7 @@ lobby_scene <- div(
   uiOutput("style_checkbox"),
   hr(),
   h4("Public games:"),
-  DTOutput("games_table", width = 700)
+  uiOutput("games_table")
 )
 
 join_scene <- div(
@@ -114,17 +114,23 @@ lobby_server <- function(input, output, session) {
     return(output)
   })
   
-  output$games_table <- renderDT(
-    games(),
-    style = "bootstrap",
-    rownames = FALSE,
-    colnames = str_remove(colnames(games()), "Join|Observe"),
-    escape = FALSE,
-    options = list(
-      ordering = FALSE,
-      dom = "t"
-    )
-  )
+  output$games_table <- renderUI({
+    if(!is.null(games())) {
+      list(
+        renderDT(
+          games() %>% select(-UUID),
+          style = "bootstrap",
+          rownames = FALSE,
+          colnames = c("Room", "Players", "", ""),
+          escape = FALSE,
+          options = list(
+            ordering = FALSE,
+            dom = "t"
+          )
+        )
+      )
+    }
+  }) 
   
   create_join_button <- function(id) {
     as.character(actionButton(paste0("button_", id), label = "Join", onclick = 'Shiny.onInputChange(\"join_from_table\", this.id)'))
@@ -146,6 +152,7 @@ lobby_server <- function(input, output, session) {
         renamed_cols <- lapply(raw_games, function(game) {
           data.frame(
             UUID = game$game_uuid,
+            Room = game$room,
             Players = paste(game$players, collapse = ", ")
           )
         })
@@ -393,13 +400,13 @@ game_server <- function(input, output, session) {
   output$game_general_info <- renderUI({
     if (game$status == "Not started") {
       info_table <- data.frame(
-        keys = c("Game UUID", "Admin nickname", "Game public"),
-        values = as.character(c(game_uuid(), format_nickname(game$admin_nickname, catch_null(nickname())), ifelse(game$public == "true", "Yes", "No")))
+        keys = c("Room", "Admin nickname"),
+        values = as.character(c(ifelse(game$public == "true", game$room, "Private"), format_nickname(game$admin_nickname, catch_null(nickname()))))
       )
     } else {
       info_table <- data.frame(
-        keys = c("Game public", "Maximum allowed cards"),
-        values = as.character(c(ifelse(game$public == "true", "Yes", "No"), game$max_cards))
+        keys = "Maximum allowed cards",
+        values = as.character(game$max_cards)
       )
     }
     list(renderTable(info_table, include.colnames = FALSE, sanitize.text.function = function(x) x))
