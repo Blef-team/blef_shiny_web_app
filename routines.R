@@ -19,6 +19,14 @@ format_nickname <- function(nickname, own_nickname) {
   ifelse(nickname == own_nickname, paste0("<b>", own_nickname, "</b>"), nickname)
 }
 
+format_players_not_started <- function(players, own_nickname = "") {
+  player_table <- do.call(rbind, lapply(players, unlist)) %>%
+    data.frame(stringsAsFactors = FALSE) %>%
+    select(Player = nickname) %>%
+    mutate(Player = sapply(Player, function(x) format_nickname(x, own_nickname)))
+  return(player_table)
+}
+
 format_all_hands <- function(hands, own_nickname = "") {
   if (length(hands) == 0) {
     return(NULL)
