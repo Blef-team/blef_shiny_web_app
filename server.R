@@ -34,7 +34,6 @@ game_scene <- div(
   uiOutput("game_general_info"),
   uiOutput("players_table"),
   uiOutput("history_table"),
-  uiOutput("hands"),
   uiOutput("bet_menu"),
   uiOutput("game_status_message"),
   uiOutput("round_status_message"),
@@ -403,30 +402,36 @@ game_server <- function(input, output, session) {
         keys = c("Room", "Admin nickname"),
         values = as.character(c(ifelse(game$public == "true", game$room, "Private"), format_nickname(game$admin_nickname, catch_null(nickname()))))
       )
-    } else {
-      info_table <- data.frame(
-        keys = "Maximum allowed cards",
-        values = as.character(game$max_cards)
-      )
+      list(renderTable(info_table, include.colnames = FALSE, sanitize.text.function = function(x) x))
     }
-    list(renderTable(info_table, include.colnames = FALSE, sanitize.text.function = function(x) x))
   })
   
   output$players_table <- renderUI({
     if (game$status == "Not started") {
       list(
         h5("Players:"),
-        renderTable(format_players(game$players, nickname())$Player, include.colnames = FALSE, sanitize.text.function = function(x) x)
+        renderTable(
+          format_players_not_started(game$players, nickname()), 
+          include.colnames = FALSE, 
+          sanitize.text.function = function(x) x
+        )
       )
     } else if (game$status == "Running") {
       list(
-        h5("Cards per player:"),
-        renderTable(format_players(game$players, nickname()), include.colnames = FALSE, sanitize.text.function = function(x) x)
+        renderTable(
+          format_players_running(game$players, game$hands, game$max_cards, nickname()), 
+          include.colnames = FALSE, 
+          sanitize.text.function = function(x) x
+        )
       )
     } else if (game$status == "Finished") {
       list(
         h5("Results:"),
-        renderTable(format_players(game$players, nickname()), include.colnames = FALSE, sanitize.text.function = function(x) x)
+        renderTable(
+          format_players_finished(game$players, nickname()), 
+          include.colnames = FALSE, 
+          sanitize.text.function = function(x) x
+        )
       )
     }
   })
@@ -437,26 +442,6 @@ game_server <- function(input, output, session) {
         h5("Actions so far:"),
         renderTable(format_history(game$history, nickname()), include.colnames = FALSE, sanitize.text.function = function(x) x)
       )
-    }
-  })
-  
-  output$hands <- renderUI({
-    if (game$status == "Running") {
-      if (length(game$hands) == 1) {
-        list(
-          h5("Your hand:"), 
-          renderUI(HTML(format_hand(game$hands[[1]]$hand)))
-        )
-      } else if (length(game$hands) > 1) {
-        list(
-          h5("Hands:"),
-          renderTable(
-            format_all_hands(game$hands, nickname()), 
-            include.colnames = FALSE, 
-            sanitize.text.function = function(x) x
-          )
-        )
-      }
     }
   })
   
