@@ -32,7 +32,6 @@ game_scene <- div(
   uiOutput("leave_button"),
   uiOutput("style_checkbox"),
   uiOutput("game_general_info"),
-  uiOutput("own_nickname"),
   uiOutput("players_table"),
   uiOutput("history_table"),
   uiOutput("hands"),
@@ -395,7 +394,7 @@ game_server <- function(input, output, session) {
     if (game$status == "Not started") {
       info_table <- data.frame(
         keys = c("Game UUID", "Admin nickname", "Game public"),
-        values = as.character(c(game_uuid(), game$admin_nickname, ifelse(game$public == "true", "Yes", "No")))
+        values = as.character(c(game_uuid(), format_nickname(game$admin_nickname, catch_null(nickname())), ifelse(game$public == "true", "Yes", "No")))
       )
     } else {
       info_table <- data.frame(
@@ -403,11 +402,7 @@ game_server <- function(input, output, session) {
         values = as.character(c(ifelse(game$public == "true", "Yes", "No"), game$max_cards))
       )
     }
-    list(renderTable(info_table, include.colnames = FALSE))
-  })
-  
-  output$own_nickname <- renderUI({
-    if (nickname() != "") h5(HTML(paste0("You are playing as: ", nickname(), ".")))
+    list(renderTable(info_table, include.colnames = FALSE, sanitize.text.function = function(x) x))
   })
   
   output$players_table <- renderUI({
