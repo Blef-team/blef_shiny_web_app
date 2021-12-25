@@ -32,7 +32,7 @@ format_all_hands <- function(hands, own_nickname = "") {
 
 format_hand <- function(hand) {
   lapply(hand, function(card) {
-    as.character(img(src = paste0("assets/cards/specific/", card$value, card$colour, ".png"), height = 40))
+    as.character(img(src = paste0("assets/cards/cropped/", card$value, card$colour, ".png"), height = 45))
   }) %>%
     paste0(collapse = "")
 }
