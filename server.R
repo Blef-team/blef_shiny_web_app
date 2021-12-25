@@ -425,7 +425,11 @@ game_server <- function(input, output, session) {
     } else if (game$status == "Finished") {
       list(
         h5("Results:"),
-        renderTable(format_players(game$players, nickname()), include.colnames = FALSE, sanitize.text.function = function(x) x)
+        renderTable(
+          format_players_finished(game$players, nickname()), 
+          include.colnames = FALSE, 
+          sanitize.text.function = function(x) x
+        )
       )
     }
   })

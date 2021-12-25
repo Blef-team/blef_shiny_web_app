@@ -27,6 +27,15 @@ format_players_not_started <- function(players, own_nickname = "") {
   return(player_table)
 }
 
+format_players_finished <- function(players, own_nickname = "") {
+  player_table <- do.call(rbind, lapply(players, unlist)) %>%
+    data.frame(stringsAsFactors = FALSE) %>%
+    select(Player = nickname, Cards = n_cards) %>%
+    mutate(Player = sapply(Player, function(x) format_nickname(x, own_nickname))) %>%
+    mutate(Cards = sapply(Cards, function(n) ifelse(n == "0", "<b>Lost</b>", "<b>Won</b>")))
+  return(player_table)
+}
+
 format_all_hands <- function(hands, own_nickname = "") {
   if (length(hands) == 0) {
     return(NULL)
