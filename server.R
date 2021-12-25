@@ -508,7 +508,7 @@ game_server <- function(input, output, session) {
   output$admin_panel <- renderUI({
     if (game$status == "Not started" & catch_null(nickname()) == game$admin_nickname) {
       list(
-        start_button <- actionButton("start", "Start game"),
+        start_button <- if (length(game$players) >= 2) actionButton("start", "Start game"),
         privacy_button <- if (game$public == "false") actionButton("make_public", "Make public"),
         privacy_button <- if (game$public == "true") actionButton("make_private", "Make private")
       )
