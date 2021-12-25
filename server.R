@@ -508,9 +508,10 @@ game_server <- function(input, output, session) {
   output$admin_panel <- renderUI({
     if (game$status == "Not started" & catch_null(nickname()) == game$admin_nickname) {
       list(
-        start_button <- actionButton("start", "Start game"),
+        start_button <- if (length(game$players) >= 2) actionButton("start", "Start game"),
         privacy_button <- if (game$public == "false") actionButton("make_public", "Make public"),
-        privacy_button <- if (game$public == "true") actionButton("make_private", "Make private")
+        privacy_button <- if (game$public == "true") actionButton("make_private", "Make private"),
+        invite_dazhbog_button <- actionButton("invite_dazhbog", "Invite Dazhbog (AI)")
       )
     }
   })
@@ -587,6 +588,16 @@ game_server <- function(input, output, session) {
   
   observeEvent(input$make_private, {
     response <- try(GET(paste0(base_path, "games/", game_uuid(), "/make-private?admin_uuid=", player_uuid())), silent = TRUE)
+    if (is_empty_response(response)) {
+      shinyalert("Error", "There was an error querying the game engine")
+    } else if (status_code(response) != 200) {
+      shinyalert("Error", paste0("The engine returned an error saying: ", content(response)))
+    }
+    try_update_to_current_state(game_uuid(), player_uuid())
+  })
+  
+  observeEvent(input$invite_dazhbog, {
+    response <- try(GET(paste0(base_path, "games/", game_uuid(), "/invite-aiagent?admin_uuid=", player_uuid(), "&agent_name=Dazhbog")), silent = TRUE)
     if (is_empty_response(response)) {
       shinyalert("Error", "There was an error querying the game engine")
     } else if (status_code(response) != 200) {
